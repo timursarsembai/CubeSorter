@@ -14,6 +14,12 @@ import kotlin.math.min
 import kotlin.math.sin
 import kotlin.random.Random
 
+enum class SortType {
+    NUMBERS,   // Сортировка чисел 0-9
+    COLORS,    // Сортировка цветов
+    EMOJIS     // Сортировка смайликов
+}
+
 class SorterGameView @JvmOverloads constructor(
     context: Context,
     attrs: AttributeSet? = null,
@@ -37,6 +43,9 @@ class SorterGameView @JvmOverloads constructor(
     private var moves = 0
     private var round = 1
     private var targets: IntArray = IntArray(maxOf(1, cols - 1)) { it }
+
+    // Текущий тип сортировки
+    private var currentSortType: SortType = SortType.NUMBERS
 
     private var dragging = false
     private var dragFromCol = -1
@@ -82,23 +91,53 @@ class SorterGameView @JvmOverloads constructor(
         color = Color.parseColor("#263238")
     }
 
+    // Цвета для чисел
     private val digitColors = intArrayOf(
-        Color.parseColor("#FF7043"),
-        Color.parseColor("#42A5F5"),
-        Color.parseColor("#66BB6A"),
-        Color.parseColor("#FFA726"),
-        Color.parseColor("#AB47BC"),
-        Color.parseColor("#26C6DA"),
-        Color.parseColor("#EC407A"),
-        Color.parseColor("#7E57C2"),
-        Color.parseColor("#8D6E63"),
-        Color.parseColor("#FFCA28")
+        Color.parseColor("#FF7043"), // 0 - оранжевый
+        Color.parseColor("#42A5F5"), // 1 - голубой
+        Color.parseColor("#66BB6A"), // 2 - зеленый
+        Color.parseColor("#FFA726"), // 3 - желтый
+        Color.parseColor("#AB47BC"), // 4 - фиолетовый
+        Color.parseColor("#26C6DA"), // 5 - бирюзовый
+        Color.parseColor("#EC407A"), // 6 - розовый
+        Color.parseColor("#7E57C2"), // 7 - сиреневый
+        Color.parseColor("#8D6E63"), // 8 - коричневый
+        Color.parseColor("#FFCA28")  // 9 - золотой
+    )
+
+    // Цвета для сортировки по цветам
+    private val sortColors = intArrayOf(
+        Color.parseColor("#F44336"), // 0 - красный
+        Color.parseColor("#FF9800"), // 1 - оранжевый
+        Color.parseColor("#FFEB3B"), // 2 - желтый
+        Color.parseColor("#4CAF50"), // 3 - зеленый
+        Color.parseColor("#2196F3"), // 4 - синий
+        Color.parseColor("#9C27B0"), // 5 - фиолетовый
+        Color.parseColor("#E91E63"), // 6 - розовый
+        Color.parseColor("#795548"), // 7 - коричневый
+        Color.parseColor("#607D8B"), // 8 - серый
+        Color.parseColor("#000000")  // 9 - черный
+    )
+
+    // Смайлики для сортировки
+    private val emojiList = arrayOf(
+        "😀", "😁", "😂", "🤣", "😃", "😄", "😅", "😆", "😉", "😊"
     )
 
     init { isClickable = true; resetAll() }
 
     fun resetAll() { moves = 0; round = 1; startRound(); notifyMoves() }
     fun nextRound() { round += 1; startRound() }
+
+    // Определяем тип сортировки для текущего раунда
+    private fun getSortTypeForRound(round: Int): SortType {
+        return when ((round - 1) % 3) {
+            0 -> SortType.NUMBERS
+            1 -> SortType.COLORS
+            2 -> SortType.EMOJIS
+            else -> SortType.NUMBERS
+        }
+    }
 
     private fun computeGridForRound() {
         val step = (round - 1) / 5
@@ -133,6 +172,9 @@ class SorterGameView @JvmOverloads constructor(
     }
 
     private fun startRound() {
+        // Определяем тип сортировки для текущего раунда
+        currentSortType = getSortTypeForRound(round)
+
         computeGridForRound()
         resizeStacks(cols)
         recalcMetricsFromView()
@@ -157,7 +199,10 @@ class SorterGameView @JvmOverloads constructor(
 
     private fun notifyMoves() { onMovesChanged?.invoke(moves) }
 
-    override fun onSizeChanged(w: Int, h: Int, oldw: Int, oldh: Int) { super.onSizeChanged(w, h, oldw, oldh); recalcMetrics(w - paddingLeft - paddingRight, h - paddingTop - paddingBottom) }
+    override fun onSizeChanged(w: Int, h: Int, oldw: Int, oldh: Int) {
+        super.onSizeChanged(w, h, oldw, oldh)
+        recalcMetrics(w - paddingLeft - paddingRight, h - paddingTop - paddingBottom)
+    }
 
     override fun onDraw(canvas: Canvas) {
         super.onDraw(canvas)
@@ -174,12 +219,18 @@ class SorterGameView @JvmOverloads constructor(
         )
         canvas.drawRect(bl, bt, br, bb, overlayPaint)
         overlayPaint.shader = null
-        for (r in 0 until rows) for (c in 0 until cols) {
-            val l = gridLeft + c * cellSize
-            val t = gridTop + r * cellSize
-            canvas.drawRect(l, t, l + cellSize, t + cellSize, cellBgPaint)
-            canvas.drawRect(l, t, l + cellSize, t + cellSize, gridPaint)
+
+        // Рисуем сетку
+        for (r in 0 until rows) {
+            for (c in 0 until cols) {
+                val l = gridLeft + c * cellSize
+                val t = gridTop + r * cellSize
+                canvas.drawRect(l, t, l + cellSize, t + cellSize, cellBgPaint)
+                canvas.drawRect(l, t, l + cellSize, t + cellSize, gridPaint)
+            }
         }
+
+        // Рисуем блоки
         for (c in 0 until cols) {
             val stack = stacks[c]
             for (i in stack.indices) {
@@ -189,13 +240,19 @@ class SorterGameView @JvmOverloads constructor(
                 drawBlock(canvas, c, r, digit)
             }
         }
+
+        // Рисуем перетаскиваемый блок
         if (dragging && dragDigit >= 0) drawFloatingBlock(canvas, dragX, dragY, dragDigit)
+
+        // Подсветка места для размещения
         if (dragging && hoverCol >= 0 && hoverRow >= 0 && hoverValid) {
             val l = gridLeft + hoverCol * cellSize
             val t = gridTop + hoverRow * cellSize
             overlayPaint.color = Color.argb(80, 56, 142, 60)
             canvas.drawRect(l, t, l + cellSize, t + cellSize, overlayPaint)
         }
+
+        // Анимация отклонения
         if (rejectCol in 0 until cols) {
             val elapsed = SystemClock.uptimeMillis() - rejectAnimStart
             val p = (elapsed.toFloat() / rejectAnimDuration).coerceIn(0f, 1f)
@@ -210,6 +267,8 @@ class SorterGameView @JvmOverloads constructor(
                 postInvalidateOnAnimation()
             } else { rejectCol = -1 }
         }
+
+        // Анимация принятия
         if (acceptAnimActive) {
             val elapsed = SystemClock.uptimeMillis() - acceptAnimStart
             val p = (elapsed.toFloat() / acceptAnimDuration).coerceIn(0f, 1f)
@@ -226,13 +285,9 @@ class SorterGameView @JvmOverloads constructor(
                 postInvalidateOnAnimation()
             } else { acceptAnimActive = false }
         }
-        val baseY = gridTop + rows * cellSize + labelArea * 0.65f
-        val fm = labelPaint.fontMetrics
-        val baseline = baseY - (fm.ascent + fm.descent) / 2f
-        for (c in targets.indices) {
-            val cx = gridLeft + c * cellSize + cellSize / 2f
-            canvas.drawText(targets[c].toString(), cx, baseline, labelPaint)
-        }
+
+        // Рисуем метки целей внизу
+        drawTargetLabels(canvas)
     }
 
     private fun drawBlock(canvas: Canvas, col: Int, row: Int, digit: Int) {
@@ -245,7 +300,14 @@ class SorterGameView @JvmOverloads constructor(
         val right = cx + half
         val bottom = cy + half
         val round = cellSize * 0.18f
-        val color = digitColors[digit]
+
+        // Выбираем цвет в зависимости от типа сортировки
+        val color = when (currentSortType) {
+            SortType.NUMBERS -> digitColors[digit]
+            SortType.COLORS -> sortColors[digit]
+            SortType.EMOJIS -> digitColors[digit] // Для смайликов используем базовые цвета
+        }
+
         shadowPaint.color = color
         canvas.drawRoundRect(left + 3f, top + 3f, right + 3f, bottom + 3f, round, round, shadowPaint)
         blockPaint.shader = LinearGradient(
@@ -253,10 +315,28 @@ class SorterGameView @JvmOverloads constructor(
             lighten(color, 0.25f), darken(color, 0.15f), Shader.TileMode.CLAMP
         )
         canvas.drawRoundRect(left, top, right, bottom, round, round, blockPaint)
-        textPaint.color = if (isColorDark(color)) Color.WHITE else Color.parseColor("#212121")
-        val fm = textPaint.fontMetrics
-        val ty = cy - (fm.ascent + fm.descent) / 2f
-        canvas.drawText(digit.toString(), cx, ty, textPaint)
+
+        // Выбираем содержимое блока в зависимости от типа сортировки
+        when (currentSortType) {
+            SortType.NUMBERS -> {
+                textPaint.color = if (isColorDark(color)) Color.WHITE else Color.parseColor("#212121")
+                val fm = textPaint.fontMetrics
+                val ty = cy - (fm.ascent + fm.descent) / 2f
+                canvas.drawText(digit.toString(), cx, ty, textPaint)
+            }
+            SortType.COLORS -> {
+                // Для цветов показываем только цветной блок без текста
+            }
+            SortType.EMOJIS -> {
+                textPaint.color = Color.parseColor("#212121")
+                val originalSize = textPaint.textSize
+                textPaint.textSize = cellSize * 0.6f // Увеличиваем размер для смайликов
+                val fm = textPaint.fontMetrics
+                val ty = cy - (fm.ascent + fm.descent) / 2f
+                canvas.drawText(emojiList[digit], cx, ty, textPaint)
+                textPaint.textSize = originalSize // Возвращаем обычный размер
+            }
+        }
     }
 
     private fun drawFloatingBlock(canvas: Canvas, x: Float, y: Float, digit: Int) {
@@ -267,7 +347,14 @@ class SorterGameView @JvmOverloads constructor(
         val right = x + half
         val bottom = y + half
         val round = cellSize * 0.18f
-        val color = digitColors[digit]
+
+        // Выбираем цвет в зависимости от типа сортировки
+        val color = when (currentSortType) {
+            SortType.NUMBERS -> digitColors[digit]
+            SortType.COLORS -> sortColors[digit]
+            SortType.EMOJIS -> digitColors[digit] // Для смайликов используем базовые цвета
+        }
+
         shadowPaint.color = color
         canvas.drawRoundRect(left + 3f, top + 3f, right + 3f, bottom + 3f, round, round, shadowPaint)
         blockPaint.shader = LinearGradient(
@@ -275,10 +362,63 @@ class SorterGameView @JvmOverloads constructor(
             lighten(color, 0.25f), darken(color, 0.15f), Shader.TileMode.CLAMP
         )
         canvas.drawRoundRect(left, top, right, bottom, round, round, blockPaint)
-        textPaint.color = if (isColorDark(color)) Color.WHITE else Color.parseColor("#212121")
-        val fm = textPaint.fontMetrics
-        val ty = y - (fm.ascent + fm.descent) / 2f
-        canvas.drawText(digit.toString(), x, ty, textPaint)
+
+        // Выбираем содержимое блока в зависимости от типа сортировки
+        when (currentSortType) {
+            SortType.NUMBERS -> {
+                textPaint.color = if (isColorDark(color)) Color.WHITE else Color.parseColor("#212121")
+                val fm = textPaint.fontMetrics
+                val ty = y - (fm.ascent + fm.descent) / 2f
+                canvas.drawText(digit.toString(), x, ty, textPaint)
+            }
+            SortType.COLORS -> {
+                // Для цветов показываем только цветной блок без текста
+            }
+            SortType.EMOJIS -> {
+                textPaint.color = Color.parseColor("#212121")
+                val originalSize = textPaint.textSize
+                textPaint.textSize = cellSize * 0.6f // Увеличиваем размер для смайликов
+                val fm = textPaint.fontMetrics
+                val ty = y - (fm.ascent + fm.descent) / 2f
+                canvas.drawText(emojiList[digit], x, ty, textPaint)
+                textPaint.textSize = originalSize // Возвращаем обычный размер
+            }
+        }
+    }
+
+    private fun drawTargetLabels(canvas: Canvas) {
+        val baseY = gridTop + rows * cellSize + labelArea * 0.65f
+        val fm = labelPaint.fontMetrics
+        val baseline = baseY - (fm.ascent + fm.descent) / 2f
+
+        for (c in targets.indices) {
+            val cx = gridLeft + c * cellSize + cellSize / 2f
+
+            // Отображаем метки в зависимости от типа сортировки
+            when (currentSortType) {
+                SortType.NUMBERS -> {
+                    canvas.drawText(targets[c].toString(), cx, baseline, labelPaint)
+                }
+                SortType.COLORS -> {
+                    // Для цветов рисуем маленький цветной квадратик
+                    val color = sortColors[targets[c]]
+                    val size = labelPaint.textSize * 0.8f
+                    val half = size / 2f
+                    val rect = RectF(cx - half, baseY - half, cx + half, baseY + half)
+                    val paint = Paint().apply {
+                        this.color = color
+                        isAntiAlias = true
+                    }
+                    canvas.drawRoundRect(rect, 4f, 4f, paint)
+                }
+                SortType.EMOJIS -> {
+                    val originalSize = labelPaint.textSize
+                    labelPaint.textSize = labelPaint.textSize * 1.2f // Увеличиваем размер для смайликов
+                    canvas.drawText(emojiList[targets[c]], cx, baseline, labelPaint)
+                    labelPaint.textSize = originalSize // Возвращаем обычный размер
+                }
+            }
+        }
     }
 
     override fun performClick(): Boolean { super.performClick(); return true }
@@ -407,4 +547,3 @@ class SorterGameView @JvmOverloads constructor(
         return darkness >= 0.5
     }
 }
-
