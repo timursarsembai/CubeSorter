@@ -1,0 +1,22 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <string name="app_name">CubeSorter</string>
+    <string name="sorter_title_with_emoji">🧱 Sorter</string>
+    <string name="back">Back</string>
+    <string name="restart">Restart</string>
+    <string name="level">Level</string>
+    <string name="time">Time</string>
+    <string name="time_zero_tenth">00:00.0</string>
+    <string name="moves">Moves</string>
+    <string name="sorter_speak_instruction_prefix">Arrange blocks by digits:</string>
+    <string name="number_name_0">zero</string>
+    <string name="number_name_1">one</string>
+    <string name="number_name_2">two</string>
+    <string name="number_name_3">three</string>
+    <string name="number_name_4">four</string>
+    <string name="number_name_5">five</string>
+    <string name="number_name_6">six</string>
+    <string name="number_name_7">seven</string>
+    <string name="number_name_8">eight</string>
+    <string name="number_name_9">nine</string>
+</resources>

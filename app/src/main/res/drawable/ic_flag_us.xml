@@ -1,0 +1,22 @@
+<?xml version="1.0" encoding="utf-8"?>
+<vector xmlns:android="http://schemas.android.com/apk/res/android"
+    android:width="24dp"
+    android:height="16dp"
+    android:viewportWidth="24"
+    android:viewportHeight="16">
+    <!-- Base white background -->
+    <path android:fillColor="#FFFFFF" android:pathData="M0,0h24v16h-24z"/>
+    <!-- Red stripes (7 red stripes) -->
+    <path android:fillColor="#B22234" android:pathData="M0,0h24v1.23h-24z"/>
+    <path android:fillColor="#B22234" android:pathData="M0,2.46h24v1.23h-24z"/>
+    <path android:fillColor="#B22234" android:pathData="M0,4.92h24v1.23h-24z"/>
+    <path android:fillColor="#B22234" android:pathData="M0,7.38h24v1.23h-24z"/>
+    <path android:fillColor="#B22234" android:pathData="M0,9.84h24v1.23h-24z"/>
+    <path android:fillColor="#B22234" android:pathData="M0,12.3h24v1.23h-24z"/>
+    <path android:fillColor="#B22234" android:pathData="M0,14.76h24v1.24h-24z"/>
+    <!-- Blue canton -->
+    <path android:fillColor="#3C3B6E" android:pathData="M0,0h10.4v8.61h-10.4z"/>
+    <!-- Optional border -->
+    <path android:pathData="M0.5,0.5h23v15h-23z" android:fillColor="#00000000" android:strokeColor="#22000000" android:strokeWidth="1"/>
+</vector>
+

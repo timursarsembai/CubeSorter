@@ -1,0 +1,25 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <color name="black">#FF000000</color>
+    <color name="white">#FFFFFFFF</color>
+
+    <!-- Цвета для приложения DanaBala -->
+    <color name="background_color">#F8F9FA</color>
+    <color name="text_color">#2C3E50</color>
+    <color name="button_color">#3498DB</color>
+    <color name="accent_color">#E74C3C</color>
+
+    <!-- Цвета для игры рисования цифр -->
+    <color name="primaryColor">#2196F3</color>
+    <color name="primary_color">#2196F3</color>
+    <color name="successColor">#4CAF50</color>
+    <color name="textColor">#333333</color>
+
+    <!-- Цвета для вкладок -->
+    <color name="tab_text_unselected">#803F51B5</color>
+    <color name="tab_text_color_unselected">#1565C0</color>
+
+    <!-- Языки: выделение выбранного -->
+    <color name="language_selected_bg">#E3F2FD</color>
+    <color name="language_unselected_bg">#FFFFFFFF</color>
+</resources>
