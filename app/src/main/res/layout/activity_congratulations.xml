@@ -1,0 +1,95 @@
+<?xml version="1.0" encoding="utf-8"?>
+<LinearLayout xmlns:android="http://schemas.android.com/apk/res/android"
+    android:layout_width="match_parent"
+    android:layout_height="match_parent"
+    android:orientation="vertical"
+    android:background="@drawable/child_gradient_blue"
+    android:gravity="center"
+    android:padding="32dp">
+
+    <!-- Главный заголовок -->
+    <TextView
+        android:layout_width="wrap_content"
+        android:layout_height="wrap_content"
+        android:text="🎉 CONGRATULATIONS! 🎉"
+        android:textSize="32sp"
+        android:textStyle="bold"
+        android:textColor="#FFD700"
+        android:gravity="center"
+        android:layout_marginBottom="24dp" />
+
+    <!-- Поздравительный текст -->
+    <TextView
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:text="AMAZING!\n\nYou have successfully completed all 40 levels of CubeSorter!\n\nYou are truly a master of sorting and puzzle solving. Your dedication and skill have taken you through numbers, colors, and emojis - conquering every challenge!"
+        android:textSize="18sp"
+        android:textColor="#FFFFFF"
+        android:gravity="center"
+        android:lineSpacingExtra="4dp"
+        android:layout_marginBottom="32dp" />
+
+    <!-- Статистика -->
+    <com.google.android.material.card.MaterialCardView
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        app:cardCornerRadius="16dp"
+        app:cardElevation="8dp"
+        app:cardBackgroundColor="#FFFFFF"
+        android:layout_marginBottom="32dp"
+        xmlns:app="http://schemas.android.com/apk/res-auto">
+
+        <LinearLayout
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:orientation="vertical"
+            android:padding="24dp"
+            android:gravity="center">
+
+            <TextView
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                android:text="🏆 ACHIEVEMENT UNLOCKED 🏆"
+                android:textSize="20sp"
+                android:textStyle="bold"
+                android:textColor="#FF6B35"
+                android:layout_marginBottom="16dp" />
+
+            <TextView
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                android:text="✅ Completed 40 Levels\n✅ Mastered 3 Sort Types\n✅ Ultimate Puzzle Champion"
+                android:textSize="16sp"
+                android:textColor="#333333"
+                android:gravity="center"
+                android:lineSpacingExtra="2dp" />
+
+        </LinearLayout>
+    </com.google.android.material.card.MaterialCardView>
+
+    <!-- Мотивационный текст -->
+    <TextView
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:text="Thank you for playing CubeSorter!\n\nYour journey through numbers, colors, and emojis has been incredible. You've shown patience, strategy, and determination!"
+        android:textSize="16sp"
+        android:textColor="#E8F5E8"
+        android:gravity="center"
+        android:lineSpacingExtra="2dp"
+        android:layout_marginBottom="40dp" />
+
+    <!-- Кнопка возврата -->
+    <Button
+        android:id="@+id/buttonBackToMenu"
+        android:layout_width="wrap_content"
+        android:layout_height="wrap_content"
+        android:text="🎮 PLAY AGAIN"
+        android:textSize="18sp"
+        android:textStyle="bold"
+        android:textColor="#FFFFFF"
+        android:background="@drawable/bg_tab_item"
+        android:padding="16dp"
+        android:minWidth="200dp"
+        android:elevation="4dp" />
+
+</LinearLayout>

@@ -25,10 +25,13 @@ class SorterGameView @JvmOverloads constructor(
     attrs: AttributeSet? = null,
     defStyleAttr: Int = 0
 ) : View(context, attrs, defStyleAttr) {
+    companion object { const val MAX_LEVEL = 40 }
 
     var onMovesChanged: ((moves: Int) -> Unit)? = null
     var onRoundChanged: ((round: Int, targets: IntArray) -> Unit)? = null
     var onRoundCompleted: ((round: Int, moves: Int) -> Unit)? = null
+    // Новый колбэк при завершении всех уровней
+    var onAllCompleted: (() -> Unit)? = null
 
     private var cols = 4
     private var rows = 7
@@ -127,7 +130,15 @@ class SorterGameView @JvmOverloads constructor(
     init { isClickable = true; resetAll() }
 
     fun resetAll() { moves = 0; round = 1; startRound(); notifyMoves() }
-    fun nextRound() { round += 1; startRound() }
+    fun nextRound() {
+        // Если текущий раунд меньше максимального – идем дальше, иначе уведомляем о полном завершении
+        if (round < MAX_LEVEL) {
+            round += 1
+            startRound()
+        } else {
+            onAllCompleted?.invoke()
+        }
+    }
 
     // Определяем тип сортировки для текущего раунда
     private fun getSortTypeForRound(round: Int): SortType {
@@ -137,6 +148,13 @@ class SorterGameView @JvmOverloads constructor(
             2 -> SortType.EMOJIS
             else -> SortType.NUMBERS
         }
+    }
+
+    // Переход на указанный уровень (для режима администратора)
+    fun jumpToLevel(level: Int) {
+        val target = level.coerceIn(1, MAX_LEVEL)
+        round = target
+        startRound()
     }
 
     private fun computeGridForRound() {
