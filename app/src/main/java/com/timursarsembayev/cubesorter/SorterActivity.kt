@@ -23,6 +23,9 @@ class SorterActivity : Activity() {
     private var startTime: Long = 0
     private var isTimerRunning = false
 
+    // Хранение прогресса
+    private val prefs by lazy { getSharedPreferences("progress", MODE_PRIVATE) }
+
     // Админ режим
     private var isAdminMode = false
     private var isLevelPressing = false
@@ -48,6 +51,7 @@ class SorterActivity : Activity() {
         setupGameCallbacks()
         setupAdminGesture()
         startNewGame()
+        restoreProgressIfAny()
     }
 
     private fun initializeViews() {
@@ -66,17 +70,30 @@ class SorterActivity : Activity() {
         sorterGameView.onRoundChanged = { round, _ ->
             textLevel.text = round.toString()
             resetTimer()
+            saveLevel(round)
         }
 
         sorterGameView.onRoundCompleted = { _, _ ->
-            // Можно добавить локальную логику между уровнями
+            // Между уровнями можно добавить логику
         }
 
         sorterGameView.onAllCompleted = {
-            // Завершены все 40 уровней
+            // Все уровни завершены
             resetTimer()
+            saveLevel(SorterGameView.MAX_LEVEL) // сохраняем финальный уровень
             startCongratulations()
         }
+    }
+
+    private fun restoreProgressIfAny() {
+        val saved = prefs.getInt("current_level", 1)
+        if (saved in 2..SorterGameView.MAX_LEVEL) {
+            sorterGameView.jumpToLevel(saved)
+        }
+    }
+
+    private fun saveLevel(lv: Int) {
+        prefs.edit().putInt("current_level", lv.coerceIn(1, SorterGameView.MAX_LEVEL)).apply()
     }
 
     private fun setupAdminGesture() {
@@ -86,7 +103,6 @@ class SorterActivity : Activity() {
         }
 
         textLevel.setOnTouchListener { _, event ->
-            // Если уже админ режим активен — не перехватываем, даём сработать OnClick
             if (isAdminMode) return@setOnTouchListener false
             when (event.actionMasked) {
                 android.view.MotionEvent.ACTION_DOWN -> {
@@ -103,7 +119,6 @@ class SorterActivity : Activity() {
                     levelLongPressRunnable?.let { levelPressHandler.removeCallbacks(it) }
                 }
             }
-            // Возвращаем true только пока НЕ админ режим (чтобы не вызывать клик раньше времени)
             true
         }
     }
@@ -184,7 +199,6 @@ class SorterActivity : Activity() {
     private fun updateTimer() {
         val currentTime = System.currentTimeMillis()
         val elapsedTime = currentTime - startTime
-
         val minutes = (elapsedTime / 60000).toInt()
         val seconds = ((elapsedTime % 60000) / 1000).toInt()
         val tenths = ((elapsedTime % 1000) / 100).toInt()
