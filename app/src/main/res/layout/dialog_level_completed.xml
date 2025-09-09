@@ -1,0 +1,127 @@
+<?xml version="1.0" encoding="utf-8"?>
+<LinearLayout xmlns:android="http://schemas.android.com/apk/res/android"
+    android:layout_width="match_parent"
+    android:layout_height="wrap_content"
+    android:orientation="vertical"
+    android:background="@drawable/bg_level_dialog"
+    android:gravity="center_horizontal"
+    android:clipToPadding="false"
+    android:padding="0dp">
+
+    <!-- Иконка / эмодзи успеха -->
+    <TextView
+        android:id="@+id/iconEmoji"
+        android:layout_width="wrap_content"
+        android:layout_height="wrap_content"
+        android:text="🎉"
+        android:textSize="48sp"
+        android:paddingTop="4dp"
+        android:contentDescription="success" />
+
+    <TextView
+        android:id="@+id/textTitle"
+        android:layout_width="wrap_content"
+        android:layout_height="wrap_content"
+        android:text="@string/level_completed_congrats"
+        android:textColor="#0D47A1"
+        android:textStyle="bold"
+        android:textSize="22sp"
+        android:paddingTop="4dp"
+        android:paddingBottom="2dp"/>
+
+    <TextView
+        android:id="@+id/textMessage"
+        android:layout_width="wrap_content"
+        android:layout_height="wrap_content"
+        android:text="@string/level_completed_message"
+        android:textColor="#455A64"
+        android:gravity="center"
+        android:textSize="14sp"
+        android:paddingLeft="16dp"
+        android:paddingRight="16dp"
+        android:paddingBottom="12dp"/>
+
+    <!-- Статистика -->
+    <LinearLayout
+        android:layout_width="wrap_content"
+        android:layout_height="wrap_content"
+        android:orientation="horizontal"
+        android:gravity="center"
+        android:paddingBottom="12dp">
+
+        <LinearLayout
+            android:id="@+id/chipTime"
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:background="@drawable/stat_chip"
+            android:orientation="horizontal"
+            android:layout_marginRight="8dp">
+            <TextView
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                android:text="Time: "
+                android:textStyle="bold"
+                android:textColor="#1565C0"/>
+            <TextView
+                android:id="@+id/textStatTime"
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                android:text="00:00.0"
+                android:textColor="#0D47A1"/>
+        </LinearLayout>
+
+        <LinearLayout
+            android:id="@+id/chipMoves"
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:background="@drawable/stat_chip"
+            android:orientation="horizontal">
+            <TextView
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                android:text="Moves: "
+                android:textStyle="bold"
+                android:textColor="#1565C0"/>
+            <TextView
+                android:id="@+id/textStatMoves"
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                android:text="0"
+                android:textColor="#0D47A1"/>
+        </LinearLayout>
+    </LinearLayout>
+
+    <!-- Кнопки действий -->
+    <LinearLayout
+        android:layout_width="wrap_content"
+        android:layout_height="wrap_content"
+        android:orientation="horizontal"
+        android:gravity="center"
+        android:layout_marginBottom="4dp"
+        android:layout_marginTop="4dp">
+
+        <ImageButton
+            android:id="@+id/buttonRepeat"
+            android:layout_width="72dp"
+            android:layout_height="72dp"
+            android:background="@drawable/button_circle_primary"
+            android:contentDescription="@string/content_desc_repeat_level"
+            android:scaleType="centerInside"
+            android:padding="12dp"
+            android:src="@drawable/ic_repeat" />
+
+        <Space
+            android:layout_width="24dp"
+            android:layout_height="0dp"/>
+
+        <ImageButton
+            android:id="@+id/buttonNext"
+            android:layout_width="72dp"
+            android:layout_height="72dp"
+            android:background="@drawable/button_circle_primary"
+            android:contentDescription="@string/content_desc_next_level"
+            android:scaleType="centerInside"
+            android:padding="12dp"
+            android:src="@drawable/ic_arrow_forward" />
+    </LinearLayout>
+</LinearLayout>

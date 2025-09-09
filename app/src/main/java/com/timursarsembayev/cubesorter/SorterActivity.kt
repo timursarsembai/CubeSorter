@@ -8,7 +8,10 @@ import android.os.Handler
 import android.os.Looper
 import android.text.InputFilter
 import android.text.InputType
+import android.view.ContextThemeWrapper
+import android.view.LayoutInflater
 import android.widget.EditText
+import android.widget.ImageButton
 import android.widget.TextView
 import android.widget.Toast
 import java.util.Locale
@@ -22,6 +25,9 @@ class SorterActivity : Activity() {
 
     private var startTime: Long = 0
     private var isTimerRunning = false
+
+    // Диалог завершения уровня
+    private var levelDialog: AlertDialog? = null
 
     // Хранение прогресса
     private val prefs by lazy { getSharedPreferences("progress", MODE_PRIVATE) }
@@ -73,8 +79,9 @@ class SorterActivity : Activity() {
             saveLevel(round)
         }
 
-        sorterGameView.onRoundCompleted = { _, _ ->
-            // Между уровнями можно добавить логику
+        sorterGameView.onRoundCompleted = { round, moves ->
+            pauseTimer()
+            showLevelCompletedDialog(round, moves)
         }
 
         sorterGameView.onAllCompleted = {
@@ -83,6 +90,42 @@ class SorterActivity : Activity() {
             saveLevel(SorterGameView.MAX_LEVEL) // сохраняем финальный уровень
             startCongratulations()
         }
+    }
+
+    private fun showLevelCompletedDialog(round: Int, moves: Int) {
+        levelDialog?.dismiss()
+        val inflaterContext = ContextThemeWrapper(this, R.style.LevelCompleteDialogTheme)
+        val view = LayoutInflater.from(inflaterContext).inflate(R.layout.dialog_level_completed, null, false)
+        val title = view.findViewById<TextView>(R.id.textTitle)
+        val message = view.findViewById<TextView>(R.id.textMessage)
+        val statTime = view.findViewById<TextView>(R.id.textStatTime)
+        val statMoves = view.findViewById<TextView>(R.id.textStatMoves)
+        val btnRepeat = view.findViewById<ImageButton>(R.id.buttonRepeat)
+        val btnNext = view.findViewById<ImageButton>(R.id.buttonNext)
+
+        title.text = getString(R.string.level_completed_congrats)
+        val timeStr = textTimer.text.toString()
+        message.text = getString(R.string.level_completed_message)
+        statTime.text = timeStr
+        statMoves.text = moves.toString()
+
+        val dialog = AlertDialog.Builder(inflaterContext)
+            .setView(view)
+            .setCancelable(false)
+            .create()
+        levelDialog = dialog
+
+        btnRepeat.setOnClickListener {
+            dialog.dismiss()
+            sorterGameView.jumpToLevel(sorterGameView.currentRound)
+        }
+
+        btnNext.setOnClickListener {
+            dialog.dismiss()
+            sorterGameView.nextRound()
+        }
+
+        dialog.show()
     }
 
     private fun restoreProgressIfAny() {
@@ -189,6 +232,11 @@ class SorterActivity : Activity() {
         handler.post(timerRunnable)
     }
 
+    private fun pauseTimer() {
+        isTimerRunning = false
+        handler.removeCallbacks(timerRunnable)
+    }
+
     private fun resetTimer() {
         isTimerRunning = false
         handler.removeCallbacks(timerRunnable)
@@ -209,5 +257,6 @@ class SorterActivity : Activity() {
     override fun onDestroy() {
         super.onDestroy()
         resetTimer()
+        levelDialog?.dismiss()
     }
 }

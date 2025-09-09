@@ -19,4 +19,12 @@
     <string name="number_name_7">seven</string>
     <string name="number_name_8">eight</string>
     <string name="number_name_9">nine</string>
+
+    <!-- Level complete dialog (English only) -->
+    <string name="level_completed_congrats">Level completed!</string>
+    <string name="level_completed_message">Great! You can replay this level or go to the next one.</string>
+    <string name="action_repeat">Replay</string>
+    <string name="action_next">Next</string>
+    <string name="content_desc_repeat_level">Replay level</string>
+    <string name="content_desc_next_level">Next level</string>
 </resources>

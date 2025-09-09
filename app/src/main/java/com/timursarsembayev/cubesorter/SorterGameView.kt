@@ -46,6 +46,8 @@ class SorterGameView @JvmOverloads constructor(
     private var moves = 0
     private var round = 1
     private var targets: IntArray = IntArray(maxOf(1, cols - 1)) { it }
+    // Свойство для получения текущего уровня (используется в активности)
+    val currentRound: Int get() = round
 
     // Текущий тип сортировки
     private var currentSortType: SortType = SortType.NUMBERS
@@ -520,9 +522,9 @@ class SorterGameView @JvmOverloads constructor(
         }
         if (stacks[cols - 1].isNotEmpty()) return
         onRoundCompleted?.invoke(round, moves)
-        nextRound()
+        // Автоматический переход отключён – решает активити (кнопка "далее")
     }
-
+        // Переход на следующий уровень теперь инициируется извне (через кнопку "далее")
     private fun colAt(x: Float, y: Float): Int? {
         val withinX = x >= gridLeft && x < gridLeft + cols * cellSize
         val withinY = y >= gridTop && y < gridTop + rows * cellSize

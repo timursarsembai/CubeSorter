@@ -12,7 +12,6 @@
         <item name="materialAlertDialogTitleTextStyle">@style/DanaBalaDialogTitle</item>
         <item name="materialAlertDialogBodyTextStyle">@style/DanaBalaDialogBody</item>
         <item name="shapeAppearance">@style/ShapeAppearance.Material3.Corner.Large</item>
-        <!-- Убрали кастомный drawable-фон -->
     </style>
 
     <style name="DanaBalaDialogTitle" parent="@style/TextAppearance.Material3.TitleLarge">
@@ -22,5 +21,11 @@
 
     <style name="DanaBalaDialogBody" parent="@style/TextAppearance.Material3.BodyMedium">
         <item name="android:textColor">@color/text_color</item>
+    </style>
+
+    <!-- Анимационный стиль для окна диалога завершения уровня -->
+    <style name="LevelCompleteDialogTheme" parent="ThemeOverlay.Material3.MaterialAlertDialog">
+        <item name="android:windowEnterAnimation">@anim/dialog_enter</item>
+        <item name="android:windowExitAnimation">@anim/dialog_exit</item>
     </style>
 </resources>
