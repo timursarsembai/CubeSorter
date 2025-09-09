@@ -15,6 +15,12 @@ import android.widget.EditText
 import android.widget.ImageButton
 import android.widget.TextView
 import android.widget.Toast
+import androidx.core.view.GravityCompat
+import androidx.drawerlayout.widget.DrawerLayout
+import androidx.recyclerview.widget.LinearLayoutManager
+import androidx.recyclerview.widget.RecyclerView
+import java.text.SimpleDateFormat
+import java.util.Date
 import java.util.Locale
 
 class SorterActivity : Activity() {
@@ -23,6 +29,10 @@ class SorterActivity : Activity() {
     private lateinit var textTimer: TextView
     private lateinit var textMoves: TextView
     private lateinit var sorterGameView: SorterGameView
+
+    // Drawer & stats
+    private lateinit var drawerLayout: DrawerLayout
+    private lateinit var levelsAdapter: LevelStatsAdapter
 
     private var startTime: Long = 0
     private var isTimerRunning = false
@@ -55,10 +65,12 @@ class SorterActivity : Activity() {
         setContentView(R.layout.activity_sorter)
 
         initializeViews()
+        initDrawer()
         setupGameCallbacks()
         setupAdminGesture()
         startNewGame()
         restoreProgressIfAny()
+        refreshLevelStats()
     }
 
     private fun initializeViews() {
@@ -66,20 +78,50 @@ class SorterActivity : Activity() {
         textTimer = findViewById(R.id.textTimer)
         textMoves = findViewById(R.id.textMoves)
         sorterGameView = findViewById(R.id.sorterGameView)
+        drawerLayout = findViewById(R.id.drawerLayout)
+    }
+
+    private fun initDrawer() {
+        val recycler = findViewById<RecyclerView>(R.id.recyclerLevels)
+        recycler.layoutManager = LinearLayoutManager(this)
+        levelsAdapter = LevelStatsAdapter(emptyList(), ::formatElapsed, ::formatDate) { lv ->
+            sorterGameView.jumpToLevel(lv)
+            drawerLayout.closeDrawer(GravityCompat.START)
+        }
+        recycler.adapter = levelsAdapter
+        findViewById<TextView>(R.id.textCloseDrawer).setOnClickListener { drawerLayout.closeDrawer(GravityCompat.START) }
+        findViewById<ImageButton>(R.id.buttonMenu).setOnClickListener { drawerLayout.openDrawer(GravityCompat.START) }
+    }
+
+    private fun refreshLevelStats() {
+        val list = (1..SorterGameView.MAX_LEVEL).map { lv ->
+            LevelStat(
+                lv,
+                getBestTime(lv),
+                getBestMoves(lv),
+                getBestDate(lv)
+            )
+        }
+        levelsAdapter.update(list)
     }
 
     // ---- Records helpers ----
     private fun bestTimeKey(level: Int) = "best_time_$level" // Long (ms)
     private fun bestMovesKey(level: Int) = "best_moves_$level" // Int
+    private fun bestDateKey(level: Int) = "best_date_$level" // Long (epoch ms)
     private fun getBestTime(level: Int): Long = prefs.getLong(bestTimeKey(level), Long.MAX_VALUE)
     private fun getBestMoves(level: Int): Int = prefs.getInt(bestMovesKey(level), Int.MAX_VALUE)
+    private fun getBestDate(level: Int): Long = prefs.getLong(bestDateKey(level), Long.MAX_VALUE)
     private fun saveBestTime(level: Int, v: Long) { prefs.edit().putLong(bestTimeKey(level), v).apply() }
     private fun saveBestMoves(level: Int, v: Int) { prefs.edit().putInt(bestMovesKey(level), v).apply() }
+    private fun saveBestDate(level: Int, v: Long) { prefs.edit().putLong(bestDateKey(level), v).apply() }
     private fun formatElapsed(ms: Long): String {
         if (ms == Long.MAX_VALUE) return "--:--.-"
         val m = (ms / 60000).toInt(); val s = ((ms % 60000)/1000).toInt(); val t = ((ms % 1000)/100).toInt()
         return String.format(Locale.getDefault(), "%02d:%02d.%d", m, s, t)
     }
+    private val dateFormat = SimpleDateFormat("dd.MM.yy", Locale.getDefault())
+    private fun formatDate(epoch: Long): String = if (epoch == Long.MAX_VALUE) "--" else dateFormat.format(Date(epoch))
 
     private fun setupGameCallbacks() {
         sorterGameView.onMovesChanged = { moves ->
@@ -127,6 +169,10 @@ class SorterActivity : Activity() {
         var newMovesRecord = false
         if (elapsedMillis < prevBestTime) { saveBestTime(round, elapsedMillis); newTimeRecord = true }
         if (moves < prevBestMoves) { saveBestMoves(round, moves); newMovesRecord = true }
+        // Если хоть один рекорд улучшен — обновляем дату
+        if (newTimeRecord || newMovesRecord) {
+            saveBestDate(round, System.currentTimeMillis())
+        }
         val currentBestTime = getBestTime(round)
         val currentBestMoves = getBestMoves(round)
 
@@ -146,13 +192,13 @@ class SorterActivity : Activity() {
         if (currentBestTime != Long.MAX_VALUE) {
             bestTimeView.text = "Best: ${formatElapsed(currentBestTime)}"
             bestTimeView.visibility = android.view.View.VISIBLE
-            if (newTimeRecord) bestTimeView.setTextColor(Color.parseColor("#2E7D32")) else bestTimeView.setTextColor(Color.parseColor("#1976D2"))
+            bestTimeView.setTextColor(if (newTimeRecord) Color.parseColor("#2E7D32") else Color.parseColor("#1976D2"))
         } else bestTimeView.visibility = android.view.View.GONE
 
         if (currentBestMoves != Int.MAX_VALUE) {
             bestMovesView.text = "Best: $currentBestMoves"
             bestMovesView.visibility = android.view.View.VISIBLE
-            if (newMovesRecord) bestMovesView.setTextColor(Color.parseColor("#2E7D32")) else bestMovesView.setTextColor(Color.parseColor("#1976D2"))
+            bestMovesView.setTextColor(if (newMovesRecord) Color.parseColor("#2E7D32") else Color.parseColor("#1976D2"))
         } else bestMovesView.visibility = android.view.View.GONE
 
         val dialog = AlertDialog.Builder(ctx)
@@ -162,13 +208,14 @@ class SorterActivity : Activity() {
         levelDialog = dialog
 
         btnRepeat.setOnClickListener {
-            dialog.dismiss(); sorterGameView.jumpToLevel(sorterGameView.currentRound)
+            dialog.dismiss(); sorterGameView.jumpToLevel(sorterGameView.currentRound); refreshLevelStats()
         }
         btnNext.setOnClickListener {
-            dialog.dismiss(); sorterGameView.nextRound()
+            dialog.dismiss(); sorterGameView.nextRound(); refreshLevelStats()
         }
 
         dialog.show()
+        refreshLevelStats()
     }
 
     private fun restoreProgressIfAny() {
@@ -180,6 +227,7 @@ class SorterActivity : Activity() {
 
     private fun saveLevel(lv: Int) {
         prefs.edit().putInt("current_level", lv.coerceIn(1, SorterGameView.MAX_LEVEL)).apply()
+        refreshLevelStats()
     }
 
     private fun setupAdminGesture() {
@@ -244,15 +292,12 @@ class SorterActivity : Activity() {
             .setMessage("Enter level number 1..40")
             .setView(input)
             .setPositiveButton("Go") { d, _ ->
-                val text = input.text.toString().trim()
-                val num = text.toIntOrNull()
+                val num = input.text.toString().trim().toIntOrNull()
                 if (num != null && num in 1..SorterGameView.MAX_LEVEL) {
                     sorterGameView.jumpToLevel(num)
                     Toast.makeText(this, "Jumped to level $num", Toast.LENGTH_SHORT).show()
-                } else {
-                    Toast.makeText(this, "Invalid level", Toast.LENGTH_SHORT).show()
-                }
-                d.dismiss()
+                } else Toast.makeText(this, "Invalid level", Toast.LENGTH_SHORT).show()
+                d.dismiss(); refreshLevelStats()
             }
             .setNegativeButton("Cancel") { d, _ -> d.dismiss() }
             .show()
