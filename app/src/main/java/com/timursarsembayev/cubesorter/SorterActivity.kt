@@ -3,6 +3,7 @@ package com.timursarsembayev.cubesorter
 import android.app.Activity
 import android.app.AlertDialog
 import android.content.Intent
+import android.graphics.Color
 import android.os.Bundle
 import android.os.Handler
 import android.os.Looper
@@ -14,7 +15,6 @@ import android.widget.EditText
 import android.widget.ImageButton
 import android.widget.TextView
 import android.widget.Toast
-import android.graphics.Color
 import java.util.Locale
 
 class SorterActivity : Activity() {
@@ -68,6 +68,19 @@ class SorterActivity : Activity() {
         sorterGameView = findViewById(R.id.sorterGameView)
     }
 
+    // ---- Records helpers ----
+    private fun bestTimeKey(level: Int) = "best_time_$level" // Long (ms)
+    private fun bestMovesKey(level: Int) = "best_moves_$level" // Int
+    private fun getBestTime(level: Int): Long = prefs.getLong(bestTimeKey(level), Long.MAX_VALUE)
+    private fun getBestMoves(level: Int): Int = prefs.getInt(bestMovesKey(level), Int.MAX_VALUE)
+    private fun saveBestTime(level: Int, v: Long) { prefs.edit().putLong(bestTimeKey(level), v).apply() }
+    private fun saveBestMoves(level: Int, v: Int) { prefs.edit().putInt(bestMovesKey(level), v).apply() }
+    private fun formatElapsed(ms: Long): String {
+        if (ms == Long.MAX_VALUE) return "--:--.-"
+        val m = (ms / 60000).toInt(); val s = ((ms % 60000)/1000).toInt(); val t = ((ms % 1000)/100).toInt()
+        return String.format(Locale.getDefault(), "%02d:%02d.%d", m, s, t)
+    }
+
     private fun setupGameCallbacks() {
         sorterGameView.onMovesChanged = { moves ->
             textMoves.text = moves.toString()
@@ -81,8 +94,9 @@ class SorterActivity : Activity() {
         }
 
         sorterGameView.onRoundCompleted = { round, moves ->
+            val elapsedMillis = if (startTime > 0) System.currentTimeMillis() - startTime else 0L
             pauseTimer()
-            showLevelCompletedDialog(round, moves)
+            showLevelCompletedDialog(round, moves, elapsedMillis)
         }
 
         sorterGameView.onAllCompleted = {
@@ -93,37 +107,65 @@ class SorterActivity : Activity() {
         }
     }
 
-    private fun showLevelCompletedDialog(round: Int, moves: Int) {
+    // Заменяем старую версию: теперь с elapsedMillis и рекордами
+    private fun showLevelCompletedDialog(round: Int, moves: Int, elapsedMillis: Long) {
         levelDialog?.dismiss()
-        val inflaterContext = ContextThemeWrapper(this, R.style.LevelCompleteDialogTheme)
-        val view = LayoutInflater.from(inflaterContext).inflate(R.layout.dialog_level_completed, null, false)
-        val title = view.findViewById<TextView>(R.id.textTitle)
+        val ctx = ContextThemeWrapper(this, R.style.LevelCompleteDialogTheme)
+        val view = LayoutInflater.from(ctx).inflate(R.layout.dialog_level_completed, null, false)
+
         val message = view.findViewById<TextView>(R.id.textMessage)
         val statTime = view.findViewById<TextView>(R.id.textStatTime)
         val statMoves = view.findViewById<TextView>(R.id.textStatMoves)
+        val bestTimeView = view.findViewById<TextView>(R.id.textBestTime)
+        val bestMovesView = view.findViewById<TextView>(R.id.textBestMoves)
         val btnRepeat = view.findViewById<ImageButton>(R.id.buttonRepeat)
         val btnNext = view.findViewById<ImageButton>(R.id.buttonNext)
 
-        title.text = getString(R.string.level_completed_congrats)
-        val timeStr = textTimer.text.toString()
-        message.text = getString(R.string.level_completed_message)
-        statTime.text = timeStr
+        val prevBestTime = getBestTime(round)
+        val prevBestMoves = getBestMoves(round)
+        var newTimeRecord = false
+        var newMovesRecord = false
+        if (elapsedMillis < prevBestTime) { saveBestTime(round, elapsedMillis); newTimeRecord = true }
+        if (moves < prevBestMoves) { saveBestMoves(round, moves); newMovesRecord = true }
+        val currentBestTime = getBestTime(round)
+        val currentBestMoves = getBestMoves(round)
+
+        // Сообщение
+        message.text = when {
+            newTimeRecord && newMovesRecord -> getString(R.string.record_both_congrats)
+            newTimeRecord -> getString(R.string.record_time_congrats)
+            newMovesRecord -> getString(R.string.record_moves_congrats)
+            else -> getString(R.string.level_completed_message)
+        }
+
+        // Текущие значения
+        statTime.text = formatElapsed(elapsedMillis)
         statMoves.text = moves.toString()
 
-        val dialog = AlertDialog.Builder(inflaterContext)
+        // Best значения
+        if (currentBestTime != Long.MAX_VALUE) {
+            bestTimeView.text = "Best: ${formatElapsed(currentBestTime)}"
+            bestTimeView.visibility = android.view.View.VISIBLE
+            if (newTimeRecord) bestTimeView.setTextColor(Color.parseColor("#2E7D32")) else bestTimeView.setTextColor(Color.parseColor("#1976D2"))
+        } else bestTimeView.visibility = android.view.View.GONE
+
+        if (currentBestMoves != Int.MAX_VALUE) {
+            bestMovesView.text = "Best: $currentBestMoves"
+            bestMovesView.visibility = android.view.View.VISIBLE
+            if (newMovesRecord) bestMovesView.setTextColor(Color.parseColor("#2E7D32")) else bestMovesView.setTextColor(Color.parseColor("#1976D2"))
+        } else bestMovesView.visibility = android.view.View.GONE
+
+        val dialog = AlertDialog.Builder(ctx)
             .setView(view)
             .setCancelable(false)
             .create()
         levelDialog = dialog
 
         btnRepeat.setOnClickListener {
-            dialog.dismiss()
-            sorterGameView.jumpToLevel(sorterGameView.currentRound)
+            dialog.dismiss(); sorterGameView.jumpToLevel(sorterGameView.currentRound)
         }
-
         btnNext.setOnClickListener {
-            dialog.dismiss()
-            sorterGameView.nextRound()
+            dialog.dismiss(); sorterGameView.nextRound()
         }
 
         dialog.show()
