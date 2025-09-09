@@ -23,6 +23,9 @@
     <!-- Level complete dialog (English only) -->
     <string name="level_completed_congrats">Level completed!</string>
     <string name="level_completed_message">Great! You can replay this level or go to the next one.</string>
+    <string name="record_both_congrats">Amazing! New records for time and moves!</string>
+    <string name="record_time_congrats">New fastest time!</string>
+    <string name="record_moves_congrats">New best moves!</string>
     <string name="action_repeat">Replay</string>
     <string name="action_next">Next</string>
     <string name="content_desc_repeat_level">Replay level</string>

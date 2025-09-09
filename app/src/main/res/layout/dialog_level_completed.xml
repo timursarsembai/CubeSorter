@@ -54,20 +54,35 @@
             android:layout_width="wrap_content"
             android:layout_height="wrap_content"
             android:background="@drawable/stat_chip"
-            android:orientation="horizontal"
+            android:orientation="vertical"
             android:layout_marginRight="8dp">
-            <TextView
+
+            <LinearLayout
                 android:layout_width="wrap_content"
                 android:layout_height="wrap_content"
-                android:text="Time: "
-                android:textStyle="bold"
-                android:textColor="#1565C0"/>
+                android:orientation="horizontal">
+                <TextView
+                    android:layout_width="wrap_content"
+                    android:layout_height="wrap_content"
+                    android:text="Time: "
+                    android:textStyle="bold"
+                    android:textColor="#1565C0"/>
+                <TextView
+                    android:id="@+id/textStatTime"
+                    android:layout_width="wrap_content"
+                    android:layout_height="wrap_content"
+                    android:text="00:00.0"
+                    android:textColor="#0D47A1"/>
+            </LinearLayout>
             <TextView
-                android:id="@+id/textStatTime"
+                android:id="@+id/textBestTime"
                 android:layout_width="wrap_content"
                 android:layout_height="wrap_content"
-                android:text="00:00.0"
-                android:textColor="#0D47A1"/>
+                android:text="Best: 00:00.0"
+                android:textSize="12sp"
+                android:textColor="#1976D2"
+                android:paddingTop="2dp"
+                android:visibility="gone"/>
         </LinearLayout>
 
         <LinearLayout
@@ -75,19 +90,34 @@
             android:layout_width="wrap_content"
             android:layout_height="wrap_content"
             android:background="@drawable/stat_chip"
-            android:orientation="horizontal">
-            <TextView
+            android:orientation="vertical">
+
+            <LinearLayout
                 android:layout_width="wrap_content"
                 android:layout_height="wrap_content"
-                android:text="Moves: "
-                android:textStyle="bold"
-                android:textColor="#1565C0"/>
+                android:orientation="horizontal">
+                <TextView
+                    android:layout_width="wrap_content"
+                    android:layout_height="wrap_content"
+                    android:text="Moves: "
+                    android:textStyle="bold"
+                    android:textColor="#1565C0"/>
+                <TextView
+                    android:id="@+id/textStatMoves"
+                    android:layout_width="wrap_content"
+                    android:layout_height="wrap_content"
+                    android:text="0"
+                    android:textColor="#0D47A1"/>
+            </LinearLayout>
             <TextView
-                android:id="@+id/textStatMoves"
+                android:id="@+id/textBestMoves"
                 android:layout_width="wrap_content"
                 android:layout_height="wrap_content"
-                android:text="0"
-                android:textColor="#0D47A1"/>
+                android:text="Best: 0"
+                android:textSize="12sp"
+                android:textColor="#1976D2"
+                android:paddingTop="2dp"
+                android:visibility="gone"/>
         </LinearLayout>
     </LinearLayout>
 
