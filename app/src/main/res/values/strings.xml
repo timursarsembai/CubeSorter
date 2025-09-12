@@ -30,4 +30,13 @@
     <string name="action_next">Next</string>
     <string name="content_desc_repeat_level">Replay level</string>
     <string name="content_desc_next_level">Next level</string>
+
+    <!-- Drawer and records -->
+    <string name="menu">Menu</string>
+    <string name="records">Records</string>
+    <string name="records_header_level">Level</string>
+    <string name="records_header_time">Best time</string>
+    <string name="records_header_moves">Best moves</string>
+    <string name="records_header_date">Record date</string>
+    <string name="dash">-</string>
 </resources>
