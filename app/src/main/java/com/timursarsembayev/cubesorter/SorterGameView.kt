@@ -144,12 +144,9 @@ class SorterGameView @JvmOverloads constructor(
 
     // Определяем тип сортировки для текущего раунда
     private fun getSortTypeForRound(round: Int): SortType {
-        return when ((round - 1) % 3) {
-            0 -> SortType.NUMBERS
-            1 -> SortType.COLORS
-            2 -> SortType.EMOJIS
-            else -> SortType.NUMBERS
-        }
+        // Теперь выбор случайный на каждый раунд
+        val types = SortType.values()
+        return types[Random.nextInt(types.size)]
     }
 
     // Переход на указанный уровень (для режима администратора)
