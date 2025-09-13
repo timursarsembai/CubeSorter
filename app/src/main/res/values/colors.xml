@@ -22,4 +22,7 @@
     <!-- Языки: выделение выбранного -->
     <color name="language_selected_bg">#E3F2FD</color>
     <color name="language_unselected_bg">#FFFFFFFF</color>
+
+    <!-- Таблица рекордов: чередование строк -->
+    <color name="records_row_alt_bg">#FFF3F6FA</color>
 </resources>

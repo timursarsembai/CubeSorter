@@ -9,6 +9,7 @@ import android.os.Handler
 import android.os.Looper
 import android.text.InputFilter
 import android.text.InputType
+import android.util.TypedValue
 import android.view.ContextThemeWrapper
 import android.view.LayoutInflater
 import android.view.View
@@ -34,6 +35,7 @@ class SorterActivity : Activity() {
     private lateinit var drawerLayout: DrawerLayout
     private lateinit var recordsTable: TableLayout
     private lateinit var buttonOpenDrawer: ImageButton
+    private lateinit var buttonCloseDrawer: ImageButton
 
     private var startTime: Long = 0
     private var isTimerRunning = false
@@ -81,12 +83,16 @@ class SorterActivity : Activity() {
         drawerLayout = findViewById(R.id.drawerLayout)
         recordsTable = findViewById(R.id.recordsTable)
         buttonOpenDrawer = findViewById(R.id.buttonOpenDrawer)
+        buttonCloseDrawer = findViewById(R.id.buttonCloseDrawer)
     }
 
     private fun setupDrawer() {
         buttonOpenDrawer.setOnClickListener {
             populateRecordsTable()
             drawerLayout.openDrawer(GravityCompat.START)
+        }
+        buttonCloseDrawer.setOnClickListener {
+            drawerLayout.closeDrawer(GravityCompat.START)
         }
     }
 
@@ -334,10 +340,10 @@ class SorterActivity : Activity() {
         recordsTable.removeAllViews()
         // Заголовок
         val header = TableRow(this)
-        header.addView(makeCell(getString(R.string.records_header_level), bold = true))
-        header.addView(makeCell(getString(R.string.records_header_time), bold = true))
-        header.addView(makeCell(getString(R.string.records_header_moves), bold = true))
-        header.addView(makeCell(getString(R.string.records_header_date), bold = true))
+        header.addView(makeHeaderCell(getString(R.string.records_header_level)))
+        header.addView(makeHeaderCell(getString(R.string.records_header_time)))
+        header.addView(makeHeaderCell(getString(R.string.records_header_moves)))
+        header.addView(makeHeaderCell(getString(R.string.records_header_date)))
         recordsTable.addView(header)
         // Строки уровней
         for (lv in 1..SorterGameView.MAX_LEVEL) {
@@ -349,16 +355,35 @@ class SorterActivity : Activity() {
             row.addView(makeCell(if (bt == Long.MAX_VALUE) getString(R.string.dash) else formatElapsed(bt)))
             row.addView(makeCell(if (bm == Int.MAX_VALUE) getString(R.string.dash) else bm.toString()))
             row.addView(makeCell(formatDate(rd)))
+            // Чередование фона строк для удобства чтения
+            if (lv % 2 == 0) {
+                row.setBackgroundColor(getColor(R.color.records_row_alt_bg))
+            }
             recordsTable.addView(row)
         }
+    }
+
+    private fun dp(value: Int): Int = TypedValue.applyDimension(
+        TypedValue.COMPLEX_UNIT_DIP, value.toFloat(), resources.displayMetrics
+    ).toInt()
+
+    private fun makeHeaderCell(text: String): TextView {
+        val tv = TextView(this)
+        tv.text = text
+        tv.setPadding(dp(12), dp(8), dp(12), dp(8))
+        tv.setTypeface(tv.typeface, android.graphics.Typeface.BOLD)
+        tv.setTextColor(getColor(R.color.primaryColor))
+        tv.textSize = 14f
+        return tv
     }
 
     private fun makeCell(text: String, bold: Boolean = false): TextView {
         val tv = TextView(this)
         tv.text = text
-        tv.setPadding(8, 8, 8, 8)
+        tv.setPadding(dp(12), dp(6), dp(12), dp(6))
         if (bold) tv.setTypeface(tv.typeface, android.graphics.Typeface.BOLD)
-        tv.setTextColor(Color.parseColor("#263238"))
+        tv.setTextColor(getColor(R.color.text_color))
+        tv.textSize = 13f
         return tv
     }
 
