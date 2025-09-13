@@ -36,6 +36,8 @@ class SorterActivity : Activity() {
     private lateinit var recordsTable: TableLayout
     private lateinit var buttonOpenDrawer: ImageButton
     private lateinit var buttonCloseDrawer: ImageButton
+    // Новая кнопка Reset
+    private lateinit var buttonReset: ImageButton
 
     private var startTime: Long = 0
     private var isTimerRunning = false
@@ -71,6 +73,7 @@ class SorterActivity : Activity() {
         setupGameCallbacks()
         setupAdminGesture()
         setupDrawer()
+        setupResetButton()
         startNewGame()
         restoreProgressIfAny()
     }
@@ -84,6 +87,7 @@ class SorterActivity : Activity() {
         recordsTable = findViewById(R.id.recordsTable)
         buttonOpenDrawer = findViewById(R.id.buttonOpenDrawer)
         buttonCloseDrawer = findViewById(R.id.buttonCloseDrawer)
+        buttonReset = findViewById(R.id.buttonReset)
     }
 
     private fun setupDrawer() {
@@ -139,6 +143,56 @@ class SorterActivity : Activity() {
             resetTimer()
             saveLevel(SorterGameView.MAX_LEVEL) // сохраняем финальный уровень
             startCongratulations()
+        }
+    }
+
+    // Диалог сброса прогресса/уровня
+    private fun setupResetButton() {
+        buttonReset.setOnClickListener {
+            AlertDialog.Builder(this)
+                .setTitle(getString(R.string.reset_progress_title))
+                .setMessage(getString(R.string.reset_progress_message))
+                .setPositiveButton(getString(R.string.reset_current_level)) { d, _ ->
+                    val current = sorterGameView.currentRound
+                    clearLevelRecords(current)
+                    // Перезапуск текущего уровня
+                    sorterGameView.jumpToLevel(current)
+                    Toast.makeText(this, getString(R.string.toast_reset_current_done), Toast.LENGTH_SHORT).show()
+                    d.dismiss()
+                }
+                .setNegativeButton(getString(R.string.reset_all_levels)) { d, _ ->
+                    clearAllRecords()
+                    // Сохранить уровень 1 и начать с нуля
+                    saveLevel(1)
+                    sorterGameView.resetAll()
+                    Toast.makeText(this, getString(R.string.toast_reset_all_done), Toast.LENGTH_SHORT).show()
+                    d.dismiss()
+                }
+                .setNeutralButton(getString(R.string.cancel)) { d, _ -> d.dismiss() }
+                .show()
+        }
+    }
+
+    private fun clearLevelRecords(level: Int) {
+        prefs.edit()
+            .remove(bestTimeKey(level))
+            .remove(bestMovesKey(level))
+            .remove(recordDateKey(level))
+            .apply()
+    }
+
+    private fun clearAllRecords() {
+        val e = prefs.edit()
+        for (lv in 1..SorterGameView.MAX_LEVEL) {
+            e.remove(bestTimeKey(lv))
+            e.remove(bestMovesKey(lv))
+            e.remove(recordDateKey(lv))
+        }
+        e.remove("current_level")
+        e.apply()
+        // Обновить таблицу рекордов, если она открыта
+        if (drawerLayout.isDrawerOpen(GravityCompat.START)) {
+            populateRecordsTable()
         }
     }
 

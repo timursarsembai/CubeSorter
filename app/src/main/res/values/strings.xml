@@ -39,4 +39,14 @@
     <string name="records_header_moves">Best moves</string>
     <string name="records_header_date">Record date</string>
     <string name="dash">-</string>
+
+    <!-- Reset UI -->
+    <string name="reset">Reset</string>
+    <string name="reset_progress_title">Reset progress</string>
+    <string name="reset_progress_message">Choose what to reset:</string>
+    <string name="reset_current_level">Reset current level</string>
+    <string name="reset_all_levels">Reset all and start from level 1</string>
+    <string name="cancel">Cancel</string>
+    <string name="toast_reset_current_done">Current level has been reset</string>
+    <string name="toast_reset_all_done">All progress has been reset</string>
 </resources>

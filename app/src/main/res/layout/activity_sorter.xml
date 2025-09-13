@@ -111,6 +111,18 @@
                         android:textColor="#2E7D32"
                         android:textSize="18sp"/>
                 </LinearLayout>
+
+                <!-- Кнопка Reset справа от блока Moves -->
+                <ImageButton
+                    android:id="@+id/buttonReset"
+                    android:layout_width="wrap_content"
+                    android:layout_height="wrap_content"
+                    android:layout_marginStart="12dp"
+                    android:background="@android:color/transparent"
+                    android:contentDescription="@string/reset"
+                    android:src="@android:drawable/ic_menu_revert"
+                    app:tint="#455A64" />
+
             </LinearLayout>
         </com.google.android.material.card.MaterialCardView>
 
