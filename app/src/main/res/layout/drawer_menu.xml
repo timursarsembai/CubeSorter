@@ -1,0 +1,84 @@
+<?xml version="1.0" encoding="utf-8"?>
+<LinearLayout
+    xmlns:android="http://schemas.android.com/apk/res/android"
+    android:id="@+id/leftDrawer"
+    android:layout_width="280dp"
+    android:layout_height="match_parent"
+    android:layout_gravity="start"
+    android:orientation="vertical"
+    android:background="@color/background_color"
+    android:padding="16dp">
+
+    <TextView
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:text="@string/menu"
+        android:textStyle="bold"
+        android:textColor="@color/primaryColor"
+        android:textSize="18sp"
+        android:paddingBottom="12dp" />
+
+    <TextView
+        android:id="@+id/menuStartGame"
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:text="@string/start_game"
+        android:textColor="@color/text_color"
+        android:textSize="16sp"
+        android:padding="12dp"
+        android:background="@android:color/transparent"
+        android:clickable="true"
+        android:focusable="true" />
+
+    <View
+        android:layout_width="match_parent"
+        android:layout_height="1dp"
+        android:background="#1F000000" />
+
+    <TextView
+        android:id="@+id/menuDifficulty"
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:text="@string/difficulty"
+        android:textColor="@color/text_color"
+        android:textSize="16sp"
+        android:padding="12dp"
+        android:background="@android:color/transparent"
+        android:clickable="true"
+        android:focusable="true" />
+
+    <View
+        android:layout_width="match_parent"
+        android:layout_height="1dp"
+        android:background="#1F000000" />
+
+    <TextView
+        android:id="@+id/menuRecords"
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:text="@string/records"
+        android:textColor="@color/text_color"
+        android:textSize="16sp"
+        android:padding="12dp"
+        android:background="@android:color/transparent"
+        android:clickable="true"
+        android:focusable="true" />
+
+    <View
+        android:layout_width="match_parent"
+        android:layout_height="1dp"
+        android:background="#1F000000" />
+
+    <TextView
+        android:id="@+id/menuReset"
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:text="@string/reset"
+        android:textColor="@color/text_color"
+        android:textSize="16sp"
+        android:padding="12dp"
+        android:background="@android:color/transparent"
+        android:clickable="true"
+        android:focusable="true" />
+
+</LinearLayout>

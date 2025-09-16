@@ -9,14 +9,11 @@ import android.os.Handler
 import android.os.Looper
 import android.text.InputFilter
 import android.text.InputType
-import android.util.TypedValue
 import android.view.ContextThemeWrapper
 import android.view.LayoutInflater
 import android.view.View
 import android.widget.EditText
 import android.widget.ImageButton
-import android.widget.TableLayout
-import android.widget.TableRow
 import android.widget.TextView
 import android.widget.Toast
 import androidx.core.view.GravityCompat
@@ -31,22 +28,41 @@ class SorterActivity : Activity() {
     private lateinit var textTimer: TextView
     private lateinit var textMoves: TextView
     private lateinit var sorterGameView: SorterGameView
-    // Drawer + records
+    // Drawer
     private lateinit var drawerLayout: DrawerLayout
-    private lateinit var recordsTable: TableLayout
     private lateinit var buttonOpenDrawer: ImageButton
-    private lateinit var buttonCloseDrawer: ImageButton
-    // Новая кнопка Reset
-    private lateinit var buttonReset: ImageButton
+    // Убрана кнопка Reset
+
+    // Пункты меню в Drawer
+    private lateinit var menuStartGame: TextView
+    private lateinit var menuDifficulty: TextView
+    private lateinit var menuRecords: TextView
+    private lateinit var menuReset: TextView
+
+    // Жизни
+    private lateinit var textLivesHeader: TextView
 
     private var startTime: Long = 0
     private var isTimerRunning = false
+
+    // Обратный отсчет
+    private var timeLimitMs: Long = 0L
+    private var deadlineMs: Long = 0L
+    private var timeUpHandled: Boolean = false
 
     // Диалог завершения уровня
     private var levelDialog: AlertDialog? = null
 
     // Хранение прогресса
     private val prefs by lazy { getSharedPreferences("progress", MODE_PRIVATE) }
+
+    // Ключи и модель сложности/жизней
+    private enum class Difficulty { EASY, NORM, HARD, EXTREME }
+    private val KEY_DIFFICULTY = "difficulty"
+    private val KEY_LIVES_CURRENT = "lives_current"
+    private val livesMax = 5
+    private var livesCurrent = livesMax
+    private var difficulty: Difficulty = Difficulty.NORM
 
     // Админ режим
     private var isAdminMode = false
@@ -70,12 +86,52 @@ class SorterActivity : Activity() {
         setContentView(R.layout.activity_sorter)
 
         initializeViews()
+        loadDifficultyAndLives()
         setupGameCallbacks()
         setupAdminGesture()
         setupDrawer()
-        setupResetButton()
+        // setupResetButton() удалён — логика вынесена в ResetActivity
         startNewGame()
         restoreProgressIfAny()
+        // Инициализация лимита времени для текущего уровня на первом запуске,
+        // т.к. onRoundChanged мог отработать до установки колбэков в этой активити
+        if (timeLimitMs == 0L) {
+            timeLimitMs = computeTimeLimitMs(sorterGameView.currentRound)
+        }
+        updateLivesUI()
+    }
+
+    override fun onResume() {
+        super.onResume()
+        // Обработка сбросов, инициированных на экране Reset
+        if (prefs.getBoolean("pending_reset_all", false)) {
+            prefs.edit().putBoolean("pending_reset_all", false).apply()
+            clearAllRecords()
+            saveLevel(1)
+            sorterGameView.resetAll()
+            livesCurrent = livesMax
+            prefs.edit().putInt(KEY_LIVES_CURRENT, livesCurrent).apply()
+            resetTimer()
+            updateLivesUI()
+            Toast.makeText(this, getString(R.string.toast_reset_all_done), Toast.LENGTH_SHORT).show()
+        } else if (prefs.getBoolean("pending_reset_current", false)) {
+            prefs.edit().putBoolean("pending_reset_current", false).apply()
+            val current = sorterGameView.currentRound
+            clearLevelRecords(current)
+            sorterGameView.jumpToLevel(current)
+            resetTimer()
+            Toast.makeText(this, getString(R.string.toast_reset_current_done), Toast.LENGTH_SHORT).show()
+        }
+
+        // Подхватываем возможное изменение сложности на отдельном экране
+        val prevDifficulty = difficulty
+        loadDifficultyAndLives()
+        if (difficulty != prevDifficulty) {
+            // Сложность изменилась — перезапускаем текущий уровень без сброса рекордов
+            sorterGameView.jumpToLevel(sorterGameView.currentRound)
+            // onRoundChanged выполнит resetTimer() и пересчитает timeLimitMs
+        }
+        updateLivesUI()
     }
 
     private fun initializeViews() {
@@ -84,18 +140,33 @@ class SorterActivity : Activity() {
         textMoves = findViewById(R.id.textMoves)
         sorterGameView = findViewById(R.id.sorterGameView)
         drawerLayout = findViewById(R.id.drawerLayout)
-        recordsTable = findViewById(R.id.recordsTable)
         buttonOpenDrawer = findViewById(R.id.buttonOpenDrawer)
-        buttonCloseDrawer = findViewById(R.id.buttonCloseDrawer)
-        buttonReset = findViewById(R.id.buttonReset)
+        textLivesHeader = findViewById(R.id.textLivesHeader)
+        // Пункты меню
+        menuStartGame = findViewById(R.id.menuStartGame)
+        menuDifficulty = findViewById(R.id.menuDifficulty)
+        menuRecords = findViewById(R.id.menuRecords)
+        menuReset = findViewById(R.id.menuReset)
     }
 
     private fun setupDrawer() {
         buttonOpenDrawer.setOnClickListener {
-            populateRecordsTable()
             drawerLayout.openDrawer(GravityCompat.START)
         }
-        buttonCloseDrawer.setOnClickListener {
+        menuStartGame.setOnClickListener {
+            // Просто закрываем меню и остаёмся на экране игры
+            drawerLayout.closeDrawer(GravityCompat.START)
+        }
+        menuDifficulty.setOnClickListener {
+            startActivity(Intent(this, DifficultyActivity::class.java))
+            drawerLayout.closeDrawer(GravityCompat.START)
+        }
+        menuRecords.setOnClickListener {
+            startActivity(Intent(this, RecordsActivity::class.java))
+            drawerLayout.closeDrawer(GravityCompat.START)
+        }
+        menuReset.setOnClickListener {
+            startActivity(Intent(this, ResetActivity::class.java))
             drawerLayout.closeDrawer(GravityCompat.START)
         }
     }
@@ -123,12 +194,20 @@ class SorterActivity : Activity() {
     private fun setupGameCallbacks() {
         sorterGameView.onMovesChanged = { moves ->
             textMoves.text = moves.toString()
-            if (moves == 1 && !isTimerRunning) startTimer()
+            if (moves == 1 && !isTimerRunning) {
+                startTimer()
+                if (timeLimitMs > 0L) {
+                    deadlineMs = startTime + timeLimitMs
+                    timeUpHandled = false
+                }
+            }
         }
 
         sorterGameView.onRoundChanged = { round, _ ->
             textLevel.text = round.toString()
             resetTimer()
+            // Расчет лимита времени согласно сложности
+            timeLimitMs = computeTimeLimitMs(round)
             saveLevel(round)
         }
 
@@ -146,32 +225,7 @@ class SorterActivity : Activity() {
         }
     }
 
-    // Диалог сброса прогресса/уровня
-    private fun setupResetButton() {
-        buttonReset.setOnClickListener {
-            AlertDialog.Builder(this)
-                .setTitle(getString(R.string.reset_progress_title))
-                .setMessage(getString(R.string.reset_progress_message))
-                .setPositiveButton(getString(R.string.reset_current_level)) { d, _ ->
-                    val current = sorterGameView.currentRound
-                    clearLevelRecords(current)
-                    // Перезапуск текущего уровня
-                    sorterGameView.jumpToLevel(current)
-                    Toast.makeText(this, getString(R.string.toast_reset_current_done), Toast.LENGTH_SHORT).show()
-                    d.dismiss()
-                }
-                .setNegativeButton(getString(R.string.reset_all_levels)) { d, _ ->
-                    clearAllRecords()
-                    // Сохранить уровень 1 и начать с нуля
-                    saveLevel(1)
-                    sorterGameView.resetAll()
-                    Toast.makeText(this, getString(R.string.toast_reset_all_done), Toast.LENGTH_SHORT).show()
-                    d.dismiss()
-                }
-                .setNeutralButton(getString(R.string.cancel)) { d, _ -> d.dismiss() }
-                .show()
-        }
-    }
+    // setupResetButton() — УДАЛЁН
 
     private fun clearLevelRecords(level: Int) {
         prefs.edit()
@@ -190,10 +244,6 @@ class SorterActivity : Activity() {
         }
         e.remove("current_level")
         e.apply()
-        // Обновить таблицу рекордов, если она открыта
-        if (drawerLayout.isDrawerOpen(GravityCompat.START)) {
-            populateRecordsTable()
-        }
     }
 
     // Заменяем старую версию: теперь с elapsedMillis и рекордами
@@ -238,13 +288,13 @@ class SorterActivity : Activity() {
         if (currentBestTime != Long.MAX_VALUE) {
             bestTimeView.text = "Best: ${formatElapsed(currentBestTime)}"
             bestTimeView.visibility = View.VISIBLE
-            if (newTimeRecord) bestTimeView.setTextColor(Color.parseColor("#2E7D32")) else bestTimeView.setTextColor(Color.parseColor("#1976D2"))
+            if (newTimeRecord) bestTimeView.setTextColor(android.graphics.Color.parseColor("#2E7D32")) else bestTimeView.setTextColor(android.graphics.Color.parseColor("#1976D2"))
         } else bestTimeView.visibility = View.GONE
 
         if (currentBestMoves != Int.MAX_VALUE) {
             bestMovesView.text = "Best: $currentBestMoves"
             bestMovesView.visibility = View.VISIBLE
-            if (newMovesRecord) bestMovesView.setTextColor(Color.parseColor("#2E7D32")) else bestMovesView.setTextColor(Color.parseColor("#1976D2"))
+            if (newMovesRecord) bestMovesView.setTextColor(android.graphics.Color.parseColor("#2E7D32")) else bestMovesView.setTextColor(android.graphics.Color.parseColor("#1976D2"))
         } else bestMovesView.visibility = View.GONE
 
         val dialog = AlertDialog.Builder(ctx)
@@ -376,74 +426,109 @@ class SorterActivity : Activity() {
         isTimerRunning = false
         handler.removeCallbacks(timerRunnable)
         startTime = 0
+        deadlineMs = 0
+        timeUpHandled = false
         textTimer.text = getString(R.string.time_zero_tenth)
     }
 
     private fun updateTimer() {
-        val currentTime = System.currentTimeMillis()
-        val elapsedTime = currentTime - startTime
-        val minutes = (elapsedTime / 60000).toInt()
-        val seconds = ((elapsedTime % 60000) / 1000).toInt()
-        val tenths = ((elapsedTime % 1000) / 100).toInt()
-
-        textTimer.text = String.format(Locale.getDefault(), "%02d:%02d.%d", minutes, seconds, tenths)
-    }
-
-    // Заполнение таблицы рекордов в Drawer
-    private fun populateRecordsTable() {
-        recordsTable.removeAllViews()
-        // Заголовок
-        val header = TableRow(this)
-        header.addView(makeHeaderCell(getString(R.string.records_header_level)))
-        header.addView(makeHeaderCell(getString(R.string.records_header_time)))
-        header.addView(makeHeaderCell(getString(R.string.records_header_moves)))
-        header.addView(makeHeaderCell(getString(R.string.records_header_date)))
-        recordsTable.addView(header)
-        // Строки уровней
-        for (lv in 1..SorterGameView.MAX_LEVEL) {
-            val row = TableRow(this)
-            val bt = getBestTime(lv)
-            val bm = getBestMoves(lv)
-            val rd = getRecordDate(lv)
-            row.addView(makeCell(lv.toString()))
-            row.addView(makeCell(if (bt == Long.MAX_VALUE) getString(R.string.dash) else formatElapsed(bt)))
-            row.addView(makeCell(if (bm == Int.MAX_VALUE) getString(R.string.dash) else bm.toString()))
-            row.addView(makeCell(formatDate(rd)))
-            // Чередование фона строк для удобства чтения
-            if (lv % 2 == 0) {
-                row.setBackgroundColor(getColor(R.color.records_row_alt_bg))
+        val now = System.currentTimeMillis()
+        if (deadlineMs > 0L) {
+            val remaining = deadlineMs - now
+            if (remaining <= 0L) {
+                textTimer.text = "00:00.0"
+                if (!timeUpHandled) onTimeUp()
+                return
             }
-            recordsTable.addView(row)
+            val minutes = (remaining / 60000).toInt()
+            val seconds = ((remaining % 60000) / 1000).toInt()
+            val tenths = ((remaining % 1000) / 100).toInt()
+            textTimer.text = String.format(Locale.getDefault(), "%02d:%02d.%d", minutes, seconds, tenths)
+        } else if (startTime > 0L) {
+            val elapsedTime = now - startTime
+            val minutes = (elapsedTime / 60000).toInt()
+            val seconds = ((elapsedTime % 60000) / 1000).toInt()
+            val tenths = ((elapsedTime % 1000) / 100).toInt()
+            textTimer.text = String.format(Locale.getDefault(), "%02d:%02d.%d", minutes, seconds, tenths)
         }
     }
 
-    private fun dp(value: Int): Int = TypedValue.applyDimension(
-        TypedValue.COMPLEX_UNIT_DIP, value.toFloat(), resources.displayMetrics
-    ).toInt()
-
-    private fun makeHeaderCell(text: String): TextView {
-        val tv = TextView(this)
-        tv.text = text
-        tv.setPadding(dp(12), dp(8), dp(12), dp(8))
-        tv.setTypeface(tv.typeface, android.graphics.Typeface.BOLD)
-        tv.setTextColor(getColor(R.color.primaryColor))
-        tv.textSize = 14f
-        return tv
-    }
-
-    private fun makeCell(text: String, bold: Boolean = false): TextView {
-        val tv = TextView(this)
-        tv.text = text
-        tv.setPadding(dp(12), dp(6), dp(12), dp(6))
-        if (bold) tv.setTypeface(tv.typeface, android.graphics.Typeface.BOLD)
-        tv.setTextColor(getColor(R.color.text_color))
-        tv.textSize = 13f
-        return tv
+    private fun onTimeUp() {
+        timeUpHandled = true
+        pauseTimer()
+        livesCurrent = (livesCurrent - 1).coerceAtLeast(0)
+        prefs.edit().putInt(KEY_LIVES_CURRENT, livesCurrent).apply()
+        updateLivesUI()
+        if (livesCurrent > 0) {
+            AlertDialog.Builder(this)
+                .setTitle(getString(R.string.time_up_title))
+                .setMessage(getString(R.string.time_up_message))
+                .setPositiveButton(getString(R.string.try_again)) { d, _ ->
+                    d.dismiss()
+                    sorterGameView.jumpToLevel(sorterGameView.currentRound)
+                }
+                .setNegativeButton(getString(R.string.cancel)) { d, _ -> d.dismiss() }
+                .setCancelable(false)
+                .show()
+        } else {
+            AlertDialog.Builder(this)
+                .setTitle(getString(R.string.out_of_lives_title))
+                .setMessage(getString(R.string.out_of_lives_message))
+                .setPositiveButton(getString(R.string.start_over)) { d, _ ->
+                    d.dismiss()
+                    livesCurrent = livesMax
+                    prefs.edit().putInt(KEY_LIVES_CURRENT, livesCurrent).apply()
+                    updateLivesUI()
+                    saveLevel(1)
+                    sorterGameView.resetAll()
+                }
+                .setCancelable(false)
+                .show()
+        }
     }
 
     override fun onDestroy() {
         super.onDestroy()
         resetTimer()
         levelDialog?.dismiss()
+    }
+
+    // ==== Жизни и сложность: утилиты ====
+    private fun loadDifficultyAndLives() {
+        val stored = prefs.getString(KEY_DIFFICULTY, Difficulty.NORM.name)
+        difficulty = try { Difficulty.valueOf(stored ?: Difficulty.NORM.name) } catch (_: Exception) { Difficulty.NORM }
+        livesCurrent = prefs.getInt(KEY_LIVES_CURRENT, livesMax).coerceIn(0, livesMax)
+    }
+
+    private fun updateLivesUI() {
+        val hearts = buildString {
+            repeat(livesCurrent) { append("❤️") }
+            repeat(livesMax - livesCurrent) { append("🤍") }
+        }
+        if (::textLivesHeader.isInitialized) textLivesHeader.text = hearts
+    }
+
+    private fun difficultyFactor(): Double = when (difficulty) {
+        Difficulty.EXTREME -> 1.5    // было 1.0, +50%
+        Difficulty.HARD -> 2.1       // было 1.4, +50%
+        Difficulty.NORM -> 2.7       // было 1.8, +50%
+        Difficulty.EASY -> 3.45      // было 2.3, +50%
+    }
+
+    private fun computeTimeLimitMs(round: Int): Long {
+        val step = (round - 1) / 5
+        val cols = 4 + step
+        val rows = 7 + step
+        val k = (cols - 1).coerceAtLeast(1) // целевые колонки
+        val h = (rows - 1).coerceAtLeast(1) // высота целевой колонки
+        val mEst = 1.5 * (k - 1).coerceAtLeast(0) * h // оценка ходов
+        val fSize = 1.0 + 0.05 * (cols - 4) + 0.03 * (rows - 7)
+        val tMove = 0.6 * fSize // сек/ход
+        val tSetup = 3.0 + 0.4 * k // сек
+        val tHardSec = tSetup + mEst * tMove
+        val tHardClamped = tHardSec.coerceIn(15.0, 600.0)
+        val tByDiff = tHardClamped * difficultyFactor()
+        val eased = (tByDiff * 1.15).coerceIn(15.0, 600.0) // +15% ко всем сложностям
+        return (eased * 1000).toLong()
     }
 }

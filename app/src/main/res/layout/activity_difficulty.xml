@@ -1,0 +1,85 @@
+<?xml version="1.0" encoding="utf-8"?>
+<LinearLayout xmlns:android="http://schemas.android.com/apk/res/android"
+    xmlns:app="http://schemas.android.com/apk/res-auto"
+    android:layout_width="match_parent"
+    android:layout_height="match_parent"
+    android:orientation="vertical"
+    android:padding="16dp"
+    android:background="@color/background_color">
+
+    <!-- Хедер с кнопкой меню -->
+    <LinearLayout
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:orientation="horizontal"
+        android:gravity="center_vertical"
+        android:paddingBottom="12dp">
+
+        <ImageButton
+            android:id="@+id/buttonOpenDrawer"
+            android:layout_width="36dp"
+            android:layout_height="36dp"
+            android:background="@android:color/transparent"
+            android:contentDescription="@string/menu"
+            android:src="@android:drawable/ic_menu_sort_by_size"
+            app:tint="#455A64"
+            android:layout_marginEnd="8dp" />
+
+        <TextView
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:text="@string/difficulty"
+            android:textStyle="bold"
+            android:textColor="@color/primaryColor"
+            android:textSize="20sp" />
+    </LinearLayout>
+
+    <TextView
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:text="@string/difficulty"
+        android:textStyle="bold"
+        android:textColor="@color/primaryColor"
+        android:textSize="20sp"
+        android:paddingBottom="12dp"
+        android:visibility="gone" />
+
+    <RadioGroup
+        android:id="@+id/radioDifficulty"
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:orientation="vertical">
+
+        <RadioButton
+            android:id="@+id/radioEasy"
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:text="@string/easy" />
+
+        <RadioButton
+            android:id="@+id/radioNorm"
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:text="@string/norm" />
+
+        <RadioButton
+            android:id="@+id/radioHard"
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:text="@string/hard" />
+
+        <RadioButton
+            android:id="@+id/radioExtreme"
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:text="@string/extreme" />
+    </RadioGroup>
+
+    <TextView
+        android:id="@+id/textHint"
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:textColor="@color/text_color"
+        android:paddingTop="12dp" />
+
+</LinearLayout>

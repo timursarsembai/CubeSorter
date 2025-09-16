@@ -14,7 +14,7 @@
         android:background="@drawable/child_gradient_blue"
         android:padding="12dp">
 
-        <!-- Информация об уровне и ходах -->
+        <!-- Информация об уровне, времени и ходах -->
         <com.google.android.material.card.MaterialCardView
             android:layout_width="match_parent"
             android:layout_height="wrap_content"
@@ -32,7 +32,7 @@
                 android:gravity="center_vertical"
                 android:padding="12dp">
 
-                <!-- Кнопка меню слева от Level -->
+                <!-- Кнопка меню -->
                 <ImageButton
                     android:id="@+id/buttonOpenDrawer"
                     android:layout_width="36dp"
@@ -43,7 +43,7 @@
                     app:tint="#455A64"
                     android:layout_marginEnd="8dp" />
 
-                <!-- Колонка Уровень -->
+                <!-- Уровень -->
                 <LinearLayout
                     android:layout_width="0dp"
                     android:layout_height="wrap_content"
@@ -54,7 +54,7 @@
                         android:layout_width="wrap_content"
                         android:layout_height="wrap_content"
                         android:text="@string/level"
-                        tools:text="Уровень"/>
+                        tools:text="Level"/>
                     <TextView
                         android:id="@+id/textLevel"
                         android:layout_width="wrap_content"
@@ -65,7 +65,7 @@
                         android:textSize="18sp"/>
                 </LinearLayout>
 
-                <!-- Колонка Секундомер -->
+                <!-- Таймер -->
                 <LinearLayout
                     android:layout_width="0dp"
                     android:layout_height="wrap_content"
@@ -77,7 +77,7 @@
                         android:layout_width="wrap_content"
                         android:layout_height="wrap_content"
                         android:text="@string/time"
-                        tools:text="Время"/>
+                        tools:text="Time"/>
                     <TextView
                         android:id="@+id/textTimer"
                         android:layout_width="wrap_content"
@@ -89,7 +89,7 @@
                         android:textSize="18sp"/>
                 </LinearLayout>
 
-                <!-- Колонка Ходы -->
+                <!-- Ходы -->
                 <LinearLayout
                     android:layout_width="0dp"
                     android:layout_height="wrap_content"
@@ -101,7 +101,7 @@
                         android:layout_width="wrap_content"
                         android:layout_height="wrap_content"
                         android:text="@string/moves"
-                        tools:text="Ходы"/>
+                        tools:text="Moves"/>
                     <TextView
                         android:id="@+id/textMoves"
                         android:layout_width="wrap_content"
@@ -112,19 +112,19 @@
                         android:textSize="18sp"/>
                 </LinearLayout>
 
-                <!-- Кнопка Reset справа от блока Moves -->
-                <ImageButton
-                    android:id="@+id/buttonReset"
-                    android:layout_width="wrap_content"
-                    android:layout_height="wrap_content"
-                    android:layout_marginStart="12dp"
-                    android:background="@android:color/transparent"
-                    android:contentDescription="@string/reset"
-                    android:src="@android:drawable/ic_menu_revert"
-                    app:tint="#455A64" />
-
             </LinearLayout>
         </com.google.android.material.card.MaterialCardView>
+
+        <!-- Панель жизней над игровым полем (только сердца, без фона/бордера) -->
+        <TextView
+            android:id="@+id/textLivesHeader"
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:layout_marginBottom="12dp"
+            android:gravity="center_horizontal"
+            android:textColor="#D32F2F"
+            android:textSize="18sp"
+            tools:text="❤️❤️❤️❤️❤️"/>
 
         <!-- Игровое поле -->
         <com.timursarsembayev.cubesorter.SorterGameView
@@ -136,67 +136,8 @@
 
     </LinearLayout>
 
-    <!-- Левое выдвижное меню с таблицей рекордов -->
-    <LinearLayout
-        android:id="@+id/leftDrawer"
-        android:layout_width="match_parent"
-        android:layout_height="match_parent"
-        android:layout_gravity="start"
-        android:orientation="vertical"
-        android:background="@color/background_color"
-        android:padding="12dp">
-
-        <LinearLayout
-            android:layout_width="match_parent"
-            android:layout_height="wrap_content"
-            android:orientation="horizontal"
-            android:gravity="center_vertical">
-
-            <TextView
-                android:id="@+id/textRecordsTitle"
-                android:layout_width="0dp"
-                android:layout_height="wrap_content"
-                android:layout_weight="1"
-                android:text="@string/records"
-                android:textStyle="bold"
-                android:textColor="#263238"
-                android:textSize="18sp"
-                android:paddingBottom="8dp"/>
-
-            <ImageButton
-                android:id="@+id/buttonCloseDrawer"
-                android:layout_width="36dp"
-                android:layout_height="36dp"
-                android:background="@android:color/transparent"
-                android:contentDescription="@string/back"
-                android:src="@drawable/ic_arrow_back"
-                app:tint="@color/primaryColor"/>
-        </LinearLayout>
-
-        <!-- Контейнер прокрутки: горизонтальная + вертикальная -->
-        <HorizontalScrollView
-            android:layout_width="match_parent"
-            android:layout_height="0dp"
-            android:layout_weight="1"
-            android:fillViewport="true"
-            android:scrollbars="horizontal">
-
-            <ScrollView
-                android:layout_width="wrap_content"
-                android:layout_height="match_parent"
-                android:fillViewport="true"
-                android:scrollbars="vertical"
-                android:padding="8dp">
-
-                <TableLayout
-                    android:id="@+id/recordsTable"
-                    android:layout_width="wrap_content"
-                    android:layout_height="wrap_content">
-                    <!-- Заполняется программно -->
-                </TableLayout>
-            </ScrollView>
-        </HorizontalScrollView>
-
-    </LinearLayout>
+    <!-- Левое выдвижное меню: заменено на include -->
+    <include
+        layout="@layout/drawer_menu" />
 
 </androidx.drawerlayout.widget.DrawerLayout>

@@ -33,6 +33,7 @@
 
     <!-- Drawer and records -->
     <string name="menu">Menu</string>
+    <string name="start_game">Start Game</string>
     <string name="records">Records</string>
     <string name="records_header_level">Level</string>
     <string name="records_header_time">Best time</string>
@@ -49,4 +50,22 @@
     <string name="cancel">Cancel</string>
     <string name="toast_reset_current_done">Current level has been reset</string>
     <string name="toast_reset_all_done">All progress has been reset</string>
+
+    <!-- Lives and difficulty -->
+    <string name="lives">Lives</string>
+    <string name="difficulty">Difficulty</string>
+    <string name="easy">Easy</string>
+    <string name="norm">Normal</string>
+    <string name="hard">Hard</string>
+    <string name="extreme">Extreme</string>
+
+    <!-- Time limit dialogs -->
+    <string name="time_up_title">Time is up</string>
+    <string name="time_up_message">One life is lost. Try again?</string>
+    <string name="out_of_lives_title">Out of lives</string>
+    <string name="out_of_lives_message">All lives are spent. Start from level 1?</string>
+    <string name="try_again">Try again</string>
+    <string name="start_over">Start over</string>
+    <string name="difficulty_changed">Difficulty changed</string>
+    <string name="difficulty_apply_hint">Will apply to next round or restart to apply now</string>
 </resources>
