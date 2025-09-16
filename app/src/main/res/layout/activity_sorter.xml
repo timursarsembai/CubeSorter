@@ -115,16 +115,31 @@
             </LinearLayout>
         </com.google.android.material.card.MaterialCardView>
 
-        <!-- Панель жизней над игровым полем (только сердца, без фона/бордера) -->
-        <TextView
-            android:id="@+id/textLivesHeader"
+        <!-- Панель жизней над игровым полем: сердца по центру + сложность слева -->
+        <FrameLayout
             android:layout_width="match_parent"
             android:layout_height="wrap_content"
-            android:layout_marginBottom="12dp"
-            android:gravity="center_horizontal"
-            android:textColor="#D32F2F"
-            android:textSize="18sp"
-            tools:text="❤️❤️❤️❤️❤️"/>
+            android:layout_marginBottom="12dp">
+
+            <TextView
+                android:id="@+id/textDifficulty"
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                android:layout_gravity="start|center_vertical"
+                android:textColor="#455A64"
+                android:textSize="16sp"
+                tools:text="🙂 Easy"/>
+
+            <TextView
+                android:id="@+id/textLivesHeader"
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                android:layout_gravity="center"
+                android:gravity="center"
+                android:textColor="#D32F2F"
+                android:textSize="18sp"
+                tools:text="❤️❤️❤️❤️❤️"/>
+        </FrameLayout>
 
         <!-- Игровое поле -->
         <com.timursarsembayev.cubesorter.SorterGameView

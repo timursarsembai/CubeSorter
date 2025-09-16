@@ -44,36 +44,85 @@
         android:paddingBottom="12dp"
         android:visibility="gone" />
 
-    <RadioGroup
-        android:id="@+id/radioDifficulty"
+    <!-- Кликаемые блоки сложности -->
+    <LinearLayout
+        android:id="@+id/containerEasy"
         android:layout_width="match_parent"
         android:layout_height="wrap_content"
-        android:orientation="vertical">
+        android:orientation="vertical"
+        android:background="@drawable/difficulty_item_background"
+        android:padding="12dp"
+        android:clickable="true"
+        android:focusable="true"
+        android:layout_marginBottom="12dp">
 
-        <RadioButton
-            android:id="@+id/radioEasy"
+        <TextView
             android:layout_width="wrap_content"
             android:layout_height="wrap_content"
-            android:text="@string/easy" />
+            android:text="@string/easy"
+            android:textColor="@color/text_color"
+            android:textSize="16sp"
+            android:textStyle="bold" />
+    </LinearLayout>
 
-        <RadioButton
-            android:id="@+id/radioNorm"
+    <LinearLayout
+        android:id="@+id/containerNorm"
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:orientation="vertical"
+        android:background="@drawable/difficulty_item_background"
+        android:padding="12dp"
+        android:clickable="true"
+        android:focusable="true"
+        android:layout_marginBottom="12dp">
+
+        <TextView
             android:layout_width="wrap_content"
             android:layout_height="wrap_content"
-            android:text="@string/norm" />
+            android:text="@string/norm"
+            android:textColor="@color/text_color"
+            android:textSize="16sp"
+            android:textStyle="bold" />
+    </LinearLayout>
 
-        <RadioButton
-            android:id="@+id/radioHard"
+    <LinearLayout
+        android:id="@+id/containerHard"
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:orientation="vertical"
+        android:background="@drawable/difficulty_item_background"
+        android:padding="12dp"
+        android:clickable="true"
+        android:focusable="true"
+        android:layout_marginBottom="12dp">
+
+        <TextView
             android:layout_width="wrap_content"
             android:layout_height="wrap_content"
-            android:text="@string/hard" />
+            android:text="@string/hard"
+            android:textColor="@color/text_color"
+            android:textSize="16sp"
+            android:textStyle="bold" />
+    </LinearLayout>
 
-        <RadioButton
-            android:id="@+id/radioExtreme"
+    <LinearLayout
+        android:id="@+id/containerExtreme"
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:orientation="vertical"
+        android:background="@drawable/difficulty_item_background"
+        android:padding="12dp"
+        android:clickable="true"
+        android:focusable="true">
+
+        <TextView
             android:layout_width="wrap_content"
             android:layout_height="wrap_content"
-            android:text="@string/extreme" />
-    </RadioGroup>
+            android:text="@string/extreme"
+            android:textColor="@color/text_color"
+            android:textSize="16sp"
+            android:textStyle="bold" />
+    </LinearLayout>
 
     <TextView
         android:id="@+id/textHint"

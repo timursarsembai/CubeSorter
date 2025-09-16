@@ -41,6 +41,8 @@ class SorterActivity : Activity() {
 
     // Жизни
     private lateinit var textLivesHeader: TextView
+    // Сложность (индикатор слева от сердечек)
+    private lateinit var textDifficulty: TextView
 
     private var startTime: Long = 0
     private var isTimerRunning = false
@@ -87,6 +89,7 @@ class SorterActivity : Activity() {
 
         initializeViews()
         loadDifficultyAndLives()
+        updateDifficultyUI()
         setupGameCallbacks()
         setupAdminGesture()
         setupDrawer()
@@ -131,6 +134,7 @@ class SorterActivity : Activity() {
             sorterGameView.jumpToLevel(sorterGameView.currentRound)
             // onRoundChanged выполнит resetTimer() и пересчитает timeLimitMs
         }
+        updateDifficultyUI()
         updateLivesUI()
     }
 
@@ -142,6 +146,7 @@ class SorterActivity : Activity() {
         drawerLayout = findViewById(R.id.drawerLayout)
         buttonOpenDrawer = findViewById(R.id.buttonOpenDrawer)
         textLivesHeader = findViewById(R.id.textLivesHeader)
+        textDifficulty = findViewById(R.id.textDifficulty)
         // Пункты меню
         menuStartGame = findViewById(R.id.menuStartGame)
         menuDifficulty = findViewById(R.id.menuDifficulty)
@@ -506,6 +511,17 @@ class SorterActivity : Activity() {
             repeat(livesMax - livesCurrent) { append("🤍") }
         }
         if (::textLivesHeader.isInitialized) textLivesHeader.text = hearts
+    }
+
+    private fun updateDifficultyUI() {
+        if (!::textDifficulty.isInitialized) return
+        val label = when (difficulty) {
+            Difficulty.EASY -> "\uD83E\uDD79 Easy"
+            Difficulty.NORM -> "\uD83D\uDE0E Normal"
+            Difficulty.HARD -> "\uD83D\uDE28 Hard"
+            Difficulty.EXTREME -> "\uD83E\uDD75 Extreme"
+        }
+        textDifficulty.text = label
     }
 
     private fun difficultyFactor(): Double = when (difficulty) {
