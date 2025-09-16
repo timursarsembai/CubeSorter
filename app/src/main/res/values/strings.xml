@@ -50,6 +50,8 @@
     <string name="cancel">Cancel</string>
     <string name="toast_reset_current_done">Current level has been reset</string>
     <string name="toast_reset_all_done">All progress has been reset</string>
+    <string name="reset_current_explainer">This will reset only the current level progress. Your moves and the level state will be cleared. Other levels are not affected.</string>
+    <string name="reset_all_explainer">This will reset progress across all levels. All saved states and stats will be cleared. This action cannot be undone.</string>
 
     <!-- Lives and difficulty -->
     <string name="lives">Lives</string>

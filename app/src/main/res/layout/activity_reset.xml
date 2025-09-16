@@ -41,18 +41,51 @@
         android:textColor="@color/text_color"
         android:paddingBottom="16dp" />
 
-    <Button
-        android:id="@+id/buttonResetCurrent"
+    <!-- Блок 1: сброс текущего уровня -->
+    <LinearLayout
         android:layout_width="match_parent"
         android:layout_height="wrap_content"
-        android:text="@string/reset_current_level"
-        android:layout_marginBottom="12dp" />
+        android:orientation="vertical"
+        android:background="@drawable/hint_background"
+        android:padding="12dp"
+        android:layout_marginBottom="12dp">
 
-    <Button
-        android:id="@+id/buttonResetAll"
+        <TextView
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:text="@string/reset_current_explainer"
+            android:textColor="@color/text_color"
+            android:textSize="14sp"
+            android:layout_marginBottom="8dp" />
+
+        <Button
+            android:id="@+id/buttonResetCurrent"
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:text="@string/reset_current_level" />
+    </LinearLayout>
+
+    <!-- Блок 2: сброс всех уровней -->
+    <LinearLayout
         android:layout_width="match_parent"
         android:layout_height="wrap_content"
-        android:text="@string/reset_all_levels" />
+        android:orientation="vertical"
+        android:background="@drawable/hint_background"
+        android:padding="12dp">
+
+        <TextView
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:text="@string/reset_all_explainer"
+            android:textColor="@color/text_color"
+            android:textSize="14sp"
+            android:layout_marginBottom="8dp" />
+
+        <Button
+            android:id="@+id/buttonResetAll"
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:text="@string/reset_all_levels" />
+    </LinearLayout>
 
 </LinearLayout>
-
