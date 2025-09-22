@@ -1,5 +1,10 @@
 <?xml version="1.0" encoding="utf-8"?>
-<manifest xmlns:android="http://schemas.android.com/apk/res/android" package="com.timursarsembayev.cubesorter">
+<manifest xmlns:android="http://schemas.android.com/apk/res/android">
+
+    <!-- Network permissions required for ads & UMP -->
+    <uses-permission android:name="android.permission.INTERNET" />
+    <uses-permission android:name="android.permission.ACCESS_NETWORK_STATE" />
+
     <application
         android:name=".CubeSorterApplication"
         android:allowBackup="true"
@@ -8,6 +13,11 @@
         android:roundIcon="@mipmap/ic_launcher_round"
         android:supportsRtl="true"
         android:theme="@style/Theme.DanaBala">
+
+        <!-- AdMob App ID meta-data (replace with your real App ID for release) -->
+        <meta-data
+            android:name="com.google.android.gms.ads.APPLICATION_ID"
+            android:value="@string/admob_app_id" />
 
         <activity
             android:name=".SorterActivity"

@@ -46,6 +46,11 @@ dependencies {
     implementation(libs.material)
     implementation(libs.androidx.drawerlayout)
 
+    // Google Mobile Ads SDK
+    implementation(libs.play.services.ads)
+    // UMP (User Messaging Platform) for consent
+    implementation(libs.ump)
+
     // Testing
     testImplementation(libs.junit)
     androidTestImplementation(libs.androidx.junit)

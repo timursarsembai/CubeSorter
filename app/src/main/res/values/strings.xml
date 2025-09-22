@@ -70,4 +70,7 @@
     <string name="start_over">Start over</string>
     <string name="difficulty_changed">Difficulty changed</string>
     <string name="difficulty_apply_hint">Warning: changing difficulty will restart the current round.</string>
+
+    <!-- AdMob: real app id provided by user. -->
+    <string name="admob_app_id">ca-app-pub-8956179513137325~8292548558</string>
 </resources>

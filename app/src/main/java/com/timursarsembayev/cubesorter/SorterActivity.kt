@@ -18,9 +18,15 @@ import android.widget.TextView
 import android.widget.Toast
 import androidx.core.view.GravityCompat
 import androidx.drawerlayout.widget.DrawerLayout
+import com.google.android.gms.ads.MobileAds
+import com.google.android.gms.ads.AdRequest
+import com.google.android.gms.ads.RequestConfiguration
+import com.google.android.ump.ConsentRequestParameters
+import com.google.android.ump.UserMessagingPlatform
 import java.text.SimpleDateFormat
 import java.util.Date
 import java.util.Locale
+import android.content.pm.ApplicationInfo
 
 class SorterActivity : Activity() {
 
@@ -83,6 +89,9 @@ class SorterActivity : Activity() {
         }
     }
 
+    // Флаг, чтобы не инициализировать рекламу повторно
+    private var adsInitialized = false
+
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
         setContentView(R.layout.activity_sorter)
@@ -102,6 +111,9 @@ class SorterActivity : Activity() {
             timeLimitMs = computeTimeLimitMs(sorterGameView.currentRound)
         }
         updateLivesUI()
+
+        // Сначала UMP-согласие, затем инициализация Mobile Ads
+        requestConsentThenInitAds()
     }
 
     override fun onResume() {
@@ -546,5 +558,48 @@ class SorterActivity : Activity() {
         val tByDiff = tHardClamped * difficultyFactor()
         val eased = (tByDiff * 1.15).coerceIn(15.0, 600.0) // +15% ко всем сложностям
         return (eased * 1000).toLong()
+    }
+
+    // Инициализация UMP + Mobile Ads (покажет форму согласия при необходимости)
+    private fun requestConsentThenInitAds() {
+        val params = ConsentRequestParameters.Builder().build()
+        val consentInformation = UserMessagingPlatform.getConsentInformation(this)
+        consentInformation.requestConsentInfoUpdate(
+            this,
+            params,
+            {
+                UserMessagingPlatform.loadAndShowConsentFormIfRequired(this) { formError ->
+                    if (formError != null) {
+                        android.util.Log.w("UMP", "Consent form error: ${formError.errorCode} ${formError.message}")
+                    }
+                    initMobileAdsIfNeeded()
+                }
+            },
+            { requestError ->
+                android.util.Log.w("UMP", "Consent info update failed: ${requestError.errorCode} ${requestError.message}")
+                initMobileAdsIfNeeded()
+            }
+        )
+    }
+
+    private fun initMobileAdsIfNeeded() {
+        if (adsInitialized) return
+        adsInitialized = true
+        // Включаем тестовые устройства только для debug-сборок
+        val isDebug = (applicationInfo.flags and ApplicationInfo.FLAG_DEBUGGABLE) != 0
+        if (isDebug) {
+            val testDeviceIds = listOf(
+                com.google.android.gms.ads.AdRequest.DEVICE_ID_EMULATOR
+                // Добавьте сюда ID своего физического устройства после того, как увидите его в логах
+                // "ABCDEF0123456789ABCDEFFEDCBA9876"
+            )
+            val requestConfiguration = com.google.android.gms.ads.RequestConfiguration.Builder()
+                .setTestDeviceIds(testDeviceIds)
+                .build()
+            com.google.android.gms.ads.MobileAds.setRequestConfiguration(requestConfiguration)
+        }
+        com.google.android.gms.ads.MobileAds.initialize(this) { status ->
+            android.util.Log.d("Ads", "MobileAds initialized: $status")
+        }
     }
 }
