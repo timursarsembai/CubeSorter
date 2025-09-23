@@ -23,12 +23,15 @@ import com.google.android.gms.ads.AdRequest
 import com.google.android.gms.ads.RequestConfiguration
 import com.google.android.gms.ads.AdView
 import com.google.android.gms.ads.AdSize
+import com.google.android.gms.ads.AdListener
+import com.google.android.gms.ads.LoadAdError
 import com.google.android.ump.ConsentRequestParameters
 import com.google.android.ump.UserMessagingPlatform
 import java.text.SimpleDateFormat
 import java.util.Date
 import java.util.Locale
 import android.content.pm.ApplicationInfo
+import android.widget.FrameLayout
 
 class SorterActivity : Activity() {
 
@@ -94,6 +97,10 @@ class SorterActivity : Activity() {
     // Флаг, чтобы не инициализировать рекламу повторно
     private var adsInitialized = false
 
+    // Реклама
+    private var bannerAdView: AdView? = null
+    private var bannerFallbackTried = false
+
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
         setContentView(R.layout.activity_sorter)
@@ -152,13 +159,13 @@ class SorterActivity : Activity() {
         updateLivesUI()
 
         // Возобновляем AdView, если он есть
-        findViewById<AdView?>(R.id.adViewBanner)?.resume()
+        bannerAdView?.resume()
     }
 
     override fun onPause() {
         super.onPause()
         // Приостанавливаем AdView
-        findViewById<AdView?>(R.id.adViewBanner)?.pause()
+        bannerAdView?.pause()
     }
 
     override fun onDestroy() {
@@ -166,7 +173,8 @@ class SorterActivity : Activity() {
         resetTimer()
         levelDialog?.dismiss()
         // Освобождаем ресурсы AdView
-        findViewById<AdView?>(R.id.adViewBanner)?.destroy()
+        bannerAdView?.destroy()
+        bannerAdView = null
     }
 
     private fun initializeViews() {
@@ -619,21 +627,70 @@ class SorterActivity : Activity() {
     }
 
     private fun loadBannerAdIfPresent() {
-        val adView = findViewById<AdView?>(R.id.adViewBanner) ?: return
-        val isDebug = (applicationInfo.flags and ApplicationInfo.FLAG_DEBUGGABLE) != 0
-        val adUnitId = if (isDebug) {
-            // Тестовый баннер
-            "ca-app-pub-3940256099942544/6300978111"
-        } else {
-            // Прод баннер на главной
-            "ca-app-pub-8956179513137325/1890791730"
+        val container = findViewById<FrameLayout?>(R.id.adContainer) ?: return
+        bannerFallbackTried = false
+        loadBannerIntoContainer(container, useAdaptive = true)
+    }
+
+    private fun loadBannerIntoContainer(container: FrameLayout, useAdaptive: Boolean) {
+        // Очистим предыдущий баннер, если был
+        bannerAdView?.let { old ->
+            try { container.removeView(old) } catch (_: Exception) {}
+            try { old.destroy() } catch (_: Exception) {}
         }
-        adView.adUnitId = adUnitId
-        if (adView.adSize == null) {
-            adView.setAdSize(AdSize.BANNER)
+        bannerAdView = null
+
+        val adView = AdView(this)
+        adView.adUnitId = getString(R.string.admob_banner_home)
+        adView.visibility = View.GONE
+        adView.adListener = object : AdListener() {
+            override fun onAdLoaded() {
+                container.visibility = View.VISIBLE
+                adView.visibility = View.VISIBLE
+            }
+            override fun onAdFailedToLoad(adError: LoadAdError) {
+                adView.visibility = View.GONE
+                container.visibility = View.GONE
+                android.util.Log.e("Ads", "Banner failed to load: ${adError.code} ${adError.message}")
+                // Фолбэк: если адаптивный дал No fill (3) и мы ещё не пробовали фиксированный — пробуем BANNER
+                if (useAdaptive && !bannerFallbackTried && adError.code == 3) {
+                    bannerFallbackTried = true
+                    android.util.Log.w("Ads", "Adaptive no fill, retrying with fixed BANNER once...")
+                    loadBannerIntoContainer(container, useAdaptive = false)
+                }
+            }
         }
-        val request = AdRequest.Builder().build()
-        adView.loadAd(request)
+
+        // Добавляем во вьюиерархию заранее (ещё скрытым), чтобы получить ширину
+        if (adView.parent == null) {
+            container.removeAllViews()
+            container.addView(adView)
+        }
+
+        // После раскладки контейнера назначаем адаптивный размер и загружаем
+        container.post {
+            val request = AdRequest.Builder().build()
+            if (useAdaptive) {
+                val dm = resources.displayMetrics
+                val widthPx = if (container.width > 0) container.width else dm.widthPixels
+                val adWidthDp = (widthPx / dm.density).toInt().coerceAtLeast(1)
+                val adaptive = AdSize.getCurrentOrientationAnchoredAdaptiveBannerAdSize(this, adWidthDp)
+                adView.setAdSize(adaptive)
+                android.util.Log.i(
+                    "Ads",
+                    "Loading banner (adaptive) unit=${adView.adUnitId} size=${adaptive.width}x${adaptive.height} (dp)"
+                )
+            } else {
+                adView.setAdSize(AdSize.BANNER)
+                android.util.Log.i(
+                    "Ads",
+                    "Loading banner (fixed) unit=${adView.adUnitId} size=${AdSize.BANNER.width}x${AdSize.BANNER.height} (dp)"
+                )
+            }
+            adView.loadAd(request)
+        }
+
+        // Держим ссылку для pause/resume/destroy
+        bannerAdView = adView
     }
 }
-

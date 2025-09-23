@@ -73,4 +73,7 @@
 
     <!-- AdMob: real app id provided by user. -->
     <string name="admob_app_id">ca-app-pub-8956179513137325~8292548558</string>
+
+    <!-- AdMob banner unit id: Home screen — используем универсальный тестовый баннерный ID -->
+    <string name="admob_banner_home">ca-app-pub-3940256099942544/6300978111</string>
 </resources>

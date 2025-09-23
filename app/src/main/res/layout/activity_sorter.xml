@@ -150,13 +150,13 @@
             android:layout_weight="1"
             android:background="@android:color/transparent"/>
 
-        <!-- Баннер AdMob -->
-        <com.google.android.gms.ads.AdView
-            android:id="@+id/adViewBanner"
+        <!-- Контейнер под баннер AdMob (сам AdView создаём программно; скрыт до загрузки) -->
+        <FrameLayout
+            android:id="@+id/adContainer"
             android:layout_width="match_parent"
             android:layout_height="wrap_content"
             android:layout_gravity="bottom"
-            ads:adSize="BANNER" />
+            android:visibility="gone" />
 
     </LinearLayout>
 
