@@ -21,6 +21,8 @@ import androidx.drawerlayout.widget.DrawerLayout
 import com.google.android.gms.ads.MobileAds
 import com.google.android.gms.ads.AdRequest
 import com.google.android.gms.ads.RequestConfiguration
+import com.google.android.gms.ads.AdView
+import com.google.android.gms.ads.AdSize
 import com.google.android.ump.ConsentRequestParameters
 import com.google.android.ump.UserMessagingPlatform
 import java.text.SimpleDateFormat
@@ -148,6 +150,23 @@ class SorterActivity : Activity() {
         }
         updateDifficultyUI()
         updateLivesUI()
+
+        // Возобновляем AdView, если он есть
+        findViewById<AdView?>(R.id.adViewBanner)?.resume()
+    }
+
+    override fun onPause() {
+        super.onPause()
+        // Приостанавливаем AdView
+        findViewById<AdView?>(R.id.adViewBanner)?.pause()
+    }
+
+    override fun onDestroy() {
+        super.onDestroy()
+        resetTimer()
+        levelDialog?.dismiss()
+        // Освобождаем ресурсы AdView
+        findViewById<AdView?>(R.id.adViewBanner)?.destroy()
     }
 
     private fun initializeViews() {
@@ -504,12 +523,6 @@ class SorterActivity : Activity() {
         }
     }
 
-    override fun onDestroy() {
-        super.onDestroy()
-        resetTimer()
-        levelDialog?.dismiss()
-    }
-
     // ==== Жизни и сложность: утилиты ====
     private fun loadDifficultyAndLives() {
         val stored = prefs.getString(KEY_DIFFICULTY, Difficulty.NORM.name)
@@ -600,6 +613,27 @@ class SorterActivity : Activity() {
         }
         com.google.android.gms.ads.MobileAds.initialize(this) { status ->
             android.util.Log.d("Ads", "MobileAds initialized: $status")
+            // После инициализации загружаем баннер, если он есть в разметке
+            loadBannerAdIfPresent()
         }
     }
+
+    private fun loadBannerAdIfPresent() {
+        val adView = findViewById<AdView?>(R.id.adViewBanner) ?: return
+        val isDebug = (applicationInfo.flags and ApplicationInfo.FLAG_DEBUGGABLE) != 0
+        val adUnitId = if (isDebug) {
+            // Тестовый баннер
+            "ca-app-pub-3940256099942544/6300978111"
+        } else {
+            // Прод баннер на главной
+            "ca-app-pub-8956179513137325/1890791730"
+        }
+        adView.adUnitId = adUnitId
+        if (adView.adSize == null) {
+            adView.setAdSize(AdSize.BANNER)
+        }
+        val request = AdRequest.Builder().build()
+        adView.loadAd(request)
+    }
 }
+
