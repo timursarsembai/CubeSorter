@@ -12,6 +12,7 @@ import android.text.InputType
 import android.view.ContextThemeWrapper
 import android.view.LayoutInflater
 import android.view.View
+import android.view.ViewGroup
 import android.widget.EditText
 import android.widget.ImageButton
 import android.widget.TextView
@@ -100,6 +101,24 @@ class SorterActivity : Activity() {
     // Реклама
     private var bannerAdView: AdView? = null
     private var bannerFallbackTried = false
+    private var mainBannerHadFill = false
+    private var mainBannerRetryAttempts = 0
+    private val maxMainBannerRetries = 3
+    // Нативная реклама для диалога завершения уровня
+    private var nativeAd: com.google.android.gms.ads.nativead.NativeAd? = null
+    private var nativeAdLoadAttempts = 0
+    private val maxNativeAdRetries = 2
+    // Баннер-фолбэк для диалога
+    private var dialogBannerAdView: AdView? = null
+    private var dialogBannerFixedTried = false
+    private var dialogBannerHadFill = false
+
+    // Прелоад для модального окна
+    private var preloadedNativeAd: com.google.android.gms.ads.nativead.NativeAd? = null
+    private var isPreloadingNative = false
+    private var preloadedDialogBanner: AdView? = null
+    private var isPreloadingBanner = false
+    private var preloadedBannerLoaded = false
 
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
@@ -160,6 +179,11 @@ class SorterActivity : Activity() {
 
         // Возобновляем AdView, если он есть
         bannerAdView?.resume()
+        // Если на старте не удалось загрузить баннер — попробуем снова
+        if (!mainBannerHadFill && bannerAdView == null) {
+            android.util.Log.i("Ads", "Retry bottom banner onResume")
+            loadBannerAdIfPresent()
+        }
     }
 
     override fun onPause() {
@@ -253,6 +277,9 @@ class SorterActivity : Activity() {
             // Расчет лимита времени согласно сложности
             timeLimitMs = computeTimeLimitMs(round)
             saveLevel(round)
+            // Пробуем прелоадить рекламу для модалки
+            if (!isPreloadingNative && preloadedNativeAd == null) preloadNativeAd()
+            if (!isPreloadingBanner && (preloadedDialogBanner == null || !preloadedBannerLoaded)) preloadDialogBanner()
         }
 
         sorterGameView.onRoundCompleted = { round, moves ->
@@ -303,6 +330,7 @@ class SorterActivity : Activity() {
         val bestMovesView = view.findViewById<TextView>(R.id.textBestMoves)
         val btnRepeat = view.findViewById<ImageButton>(R.id.buttonRepeat)
         val btnNext = view.findViewById<ImageButton>(R.id.buttonNext)
+        val nativeContainer = view.findViewById<FrameLayout>(R.id.nativeAdContainer)
 
         val prevBestTime = getBestTime(round)
         val prevBestMoves = getBestMoves(round)
@@ -354,7 +382,61 @@ class SorterActivity : Activity() {
             dialog.dismiss(); sorterGameView.nextRound()
         }
 
+        // Сначала пробуем показать прелоад, чтобы не делать запросы в момент показа
+        nativeContainer?.let { container ->
+            container.visibility = View.GONE
+            when {
+                preloadedNativeAd != null -> {
+                    val ad = preloadedNativeAd!!
+                    preloadedNativeAd = null
+                    val adView = layoutInflater.inflate(R.layout.ad_native_level_completed, null) as com.google.android.gms.ads.nativead.NativeAdView
+                    bindNativeAdToView(ad, adView)
+                    container.removeAllViews(); container.addView(adView)
+                    container.visibility = View.VISIBLE
+                    android.util.Log.i("Ads", "Shown preloaded Native in dialog")
+                    // Сразу запускаем следующий прелоад
+                    preloadNativeAd()
+                }
+                preloadedDialogBanner != null && preloadedBannerLoaded -> {
+                    val banner = preloadedDialogBanner!!
+                    preloadedDialogBanner = null
+                    preloadedBannerLoaded = false
+                    if (banner.parent != null) (banner.parent as? ViewGroup)?.removeView(banner)
+                    container.removeAllViews(); container.addView(banner)
+                    container.visibility = View.VISIBLE
+                    android.util.Log.i("Ads", "Shown preloaded dialog banner")
+                    // Запускаем следующий прелоад
+                    preloadDialogBanner()
+                }
+                else -> {
+                    // Если прелоада нет — используем текущую цепочку загрузки
+                    loadNativeAdIntoContainer(container)
+                }
+            }
+        }
+
+        dialog.setOnDismissListener {
+            // Освобождаем ресурсы нативной рекламы при закрытии диалога
+            try { nativeAd?.destroy() } catch (_: Exception) {}
+            nativeAd = null
+            nativeAdLoadAttempts = 0
+            // Освобождаем баннер-фолбэк
+            dialogBannerAdView?.let { v ->
+                try { v.destroy() } catch (_: Exception) {}
+            }
+            dialogBannerAdView = null
+            dialogBannerFixedTried = false
+            // Возобновляем нижний баннер
+            try { bannerAdView?.resume() } catch (_: Exception) {}
+            // На всякий случай, если ничего не показали — запустим прелоад для следующего раза
+            if (!isPreloadingNative && preloadedNativeAd == null) preloadNativeAd()
+            if (!isPreloadingBanner && (preloadedDialogBanner == null || !preloadedBannerLoaded)) preloadDialogBanner()
+        }
+
         dialog.show()
+        // Делаем диалог широким и приостанавливаем нижний баннер на время показа
+        dialog.window?.setLayout(ViewGroup.LayoutParams.MATCH_PARENT, ViewGroup.LayoutParams.WRAP_CONTENT)
+        try { bannerAdView?.pause() } catch (_: Exception) {}
     }
 
     private fun restoreProgressIfAny() {
@@ -623,7 +705,56 @@ class SorterActivity : Activity() {
             android.util.Log.d("Ads", "MobileAds initialized: $status")
             // После инициализации загружаем баннер, если он есть в разметке
             loadBannerAdIfPresent()
+            // И сразу прелоадим рекламу для модалки
+            if (!isPreloadingNative && preloadedNativeAd == null) preloadNativeAd()
+            if (!isPreloadingBanner && (preloadedDialogBanner == null || !preloadedBannerLoaded)) preloadDialogBanner()
         }
+    }
+
+    private fun preloadNativeAd() {
+        isPreloadingNative = true
+        val adUnitId = getString(R.string.admob_native_between_rounds)
+        val adLoader = com.google.android.gms.ads.AdLoader.Builder(this, adUnitId)
+            .forNativeAd { ad ->
+                preloadedNativeAd = ad
+                isPreloadingNative = false
+                android.util.Log.i("Ads", "Preloaded Native ad for dialog")
+            }
+            .withAdListener(object: AdListener() {
+                override fun onAdFailedToLoad(error: LoadAdError) {
+                    isPreloadingNative = false
+                    android.util.Log.w("Ads", "Preload Native failed: ${error.code} ${error.message}")
+                }
+            })
+            .build()
+        adLoader.loadAd(AdRequest.Builder().build())
+    }
+
+    private fun preloadDialogBanner() {
+        isPreloadingBanner = true
+        preloadedBannerLoaded = false
+        val adView = AdView(this)
+        adView.adUnitId = getString(R.string.admob_banner_dialog_fallback)
+        adView.adListener = object : AdListener() {
+            override fun onAdLoaded() {
+                preloadedDialogBanner = adView
+                preloadedBannerLoaded = true
+                isPreloadingBanner = false
+                android.util.Log.i("Ads", "Preloaded dialog banner (adaptive)")
+            }
+            override fun onAdFailedToLoad(adError: LoadAdError) {
+                isPreloadingBanner = false
+                preloadedDialogBanner = null
+                preloadedBannerLoaded = false
+                android.util.Log.w("Ads", "Preload dialog banner failed: ${adError.code} ${adError.message}")
+            }
+        }
+        // Размер вычисляем от ширины экрана (диалог на MATCH_PARENT)
+        val dm = resources.displayMetrics
+        val adWidthDp = (dm.widthPixels / dm.density).toInt().coerceAtLeast(1)
+        val adaptive = AdSize.getCurrentOrientationAnchoredAdaptiveBannerAdSize(this, adWidthDp)
+        adView.setAdSize(adaptive)
+        adView.loadAd(AdRequest.Builder().build())
     }
 
     private fun loadBannerAdIfPresent() {
@@ -645,18 +776,37 @@ class SorterActivity : Activity() {
         adView.visibility = View.GONE
         adView.adListener = object : AdListener() {
             override fun onAdLoaded() {
+                mainBannerHadFill = true
+                mainBannerRetryAttempts = 0
                 container.visibility = View.VISIBLE
                 adView.visibility = View.VISIBLE
             }
             override fun onAdFailedToLoad(adError: LoadAdError) {
+                android.util.Log.e("Ads", "Banner failed to load: ${adError.code} ${adError.message}")
+                // Если баннер уже показывался — не скрываем контейнер (сохраняем последнюю удачную загрузку)
+                if (mainBannerHadFill) return
+                // Иначе — обрабатываем фолбэк и ретраи
                 adView.visibility = View.GONE
                 container.visibility = View.GONE
-                android.util.Log.e("Ads", "Banner failed to load: ${adError.code} ${adError.message}")
-                // Фолбэк: если адаптивный дал No fill (3) и мы ещё не пробовали фиксированный — пробуем BANNER
                 if (useAdaptive && !bannerFallbackTried && adError.code == 3) {
                     bannerFallbackTried = true
                     android.util.Log.w("Ads", "Adaptive no fill, retrying with fixed BANNER once...")
                     loadBannerIntoContainer(container, useAdaptive = false)
+                } else {
+                    // Планируем повторную попытку через 15 сек, не более 3 раз
+                    if (mainBannerRetryAttempts < maxMainBannerRetries) {
+                        mainBannerRetryAttempts++
+                        android.util.Log.w(
+                            "Ads",
+                            "Bottom banner no fill. Retry ${mainBannerRetryAttempts}/$maxMainBannerRetries in 15000ms"
+                        )
+                        handler.postDelayed({
+                            if (!isFinishing && !isDestroyed) {
+                                bannerFallbackTried = false
+                                loadBannerIntoContainer(container, useAdaptive = true)
+                            }
+                        }, 15_000)
+                    }
                 }
             }
         }
@@ -692,5 +842,208 @@ class SorterActivity : Activity() {
 
         // Держим ссылку для pause/resume/destroy
         bannerAdView = adView
+    }
+
+    private fun loadNativeAdIntoContainer(container: FrameLayout) {
+        // Если ранее был загружен натив — уничтожим
+        nativeAd?.let { old ->
+            try { old.destroy() } catch (_: Exception) {}
+        }
+        nativeAd = null
+        container.removeAllViews()
+        container.visibility = View.GONE
+
+        val adUnitId = getString(R.string.admob_native_between_rounds)
+        val adLoader = com.google.android.gms.ads.AdLoader.Builder(this, adUnitId)
+            .forNativeAd { ad: com.google.android.gms.ads.nativead.NativeAd ->
+                // Успешная загрузка
+                nativeAd = ad
+                nativeAdLoadAttempts = 0
+                android.util.Log.i("Ads", "Native ad loaded for dialog")
+                val adView = layoutInflater.inflate(R.layout.ad_native_level_completed, null) as com.google.android.gms.ads.nativead.NativeAdView
+                bindNativeAdToView(ad, adView)
+                container.removeAllViews()
+                container.addView(adView)
+                container.visibility = View.VISIBLE
+            }
+            .withAdListener(object : AdListener() {
+                override fun onAdFailedToLoad(adError: LoadAdError) {
+                    android.util.Log.e("Ads", "Native ad failed to load: ${adError.code} ${adError.message}")
+                    // Ретрай на No fill (код 3) — до 2 попыток
+                    if (adError.code == 3 && nativeAdLoadAttempts < maxNativeAdRetries && (levelDialog?.isShowing == true)) {
+                        nativeAdLoadAttempts++
+                        android.util.Log.w("Ads", "Native no fill. Retry ${nativeAdLoadAttempts}/$maxNativeAdRetries in 1500ms")
+                        container.postDelayed({
+                            if (levelDialog?.isShowing == true) {
+                                loadNativeAdIntoContainer(container)
+                            }
+                        }, 1500)
+                    } else {
+                        // Фолбэк: адаптивный баннер
+                        loadDialogBannerFallback(container)
+                    }
+                }
+            })
+            .build()
+
+        adLoader.loadAd(AdRequest.Builder().build())
+    }
+
+    private fun loadDialogBannerFallback(container: FrameLayout) {
+        // Убираем возможные старые вью
+        container.removeAllViews()
+        container.visibility = View.GONE
+        // Освобождаем старый баннер, если есть
+        dialogBannerAdView?.let { old ->
+            try { old.destroy() } catch (_: Exception) {}
+        }
+        dialogBannerAdView = null
+        dialogBannerFixedTried = false
+        dialogBannerHadFill = false
+
+        val adView = AdView(this)
+        adView.adUnitId = getString(R.string.admob_banner_dialog_fallback)
+        adView.visibility = View.GONE
+        adView.adListener = object : AdListener() {
+            override fun onAdLoaded() {
+                dialogBannerHadFill = true
+                if (levelDialog?.isShowing == true) {
+                    container.visibility = View.VISIBLE
+                    adView.visibility = View.VISIBLE
+                    android.util.Log.i("Ads", "Dialog banner loaded (fallback)")
+                }
+            }
+            override fun onAdFailedToLoad(adError: LoadAdError) {
+                android.util.Log.e("Ads", "Dialog banner failed: ${adError.code} ${adError.message}")
+                if (dialogBannerHadFill) return // не скрываем, если уже был показ
+                // Попробуем фиксированный баннер один раз при No fill
+                if (adError.code == 3 && !dialogBannerFixedTried && levelDialog?.isShowing == true) {
+                    dialogBannerFixedTried = true
+                    android.util.Log.w("Ads", "Dialog banner adaptive no fill. Try fixed BANNER once...")
+                    loadDialogBannerFallbackFixed(container)
+                } else {
+                    adView.visibility = View.GONE
+                    container.visibility = View.GONE
+                }
+            }
+        }
+
+        // Добавляем в контейнер заранее
+        if (adView.parent == null) {
+            container.addView(adView)
+        }
+        // Настраиваем адаптивный размер
+        container.post {
+            val dm = resources.displayMetrics
+            val widthPx = if (container.width > 0) container.width else dm.widthPixels
+            val adWidthDp = (widthPx / dm.density).toInt().coerceAtLeast(1)
+            val adaptive = AdSize.getCurrentOrientationAnchoredAdaptiveBannerAdSize(this, adWidthDp)
+            adView.setAdSize(adaptive)
+            android.util.Log.i("Ads", "Loading dialog banner (adaptive) unit=${adView.adUnitId} size=${adaptive.width}x${adaptive.height} (dp)")
+            adView.loadAd(AdRequest.Builder().build())
+        }
+
+        dialogBannerAdView = adView
+    }
+
+    private fun loadDialogBannerFallbackFixed(container: FrameLayout) {
+        // Уничтожаем предыдущий, если был
+        dialogBannerAdView?.let { old ->
+            try { old.destroy() } catch (_: Exception) {}
+        }
+        dialogBannerAdView = null
+        container.removeAllViews()
+        container.visibility = View.GONE
+
+        val adView = AdView(this)
+        adView.adUnitId = getString(R.string.admob_banner_test_fixed)
+        adView.visibility = View.GONE
+        adView.adListener = object : AdListener() {
+            override fun onAdLoaded() {
+                dialogBannerHadFill = true
+                if (levelDialog?.isShowing == true) {
+                    container.visibility = View.VISIBLE
+                    adView.visibility = View.VISIBLE
+                    android.util.Log.i("Ads", "Dialog banner loaded (fixed fallback)")
+                }
+            }
+            override fun onAdFailedToLoad(adError: LoadAdError) {
+                android.util.Log.e("Ads", "Dialog fixed banner failed: ${adError.code} ${adError.message}")
+                if (dialogBannerHadFill) return // не скрываем, если уже был показ
+                adView.visibility = View.GONE
+                container.visibility = View.GONE
+            }
+        }
+
+        if (adView.parent == null) {
+            container.addView(adView)
+        }
+        // Фиксированный размер
+        container.post {
+            adView.setAdSize(AdSize.BANNER)
+            android.util.Log.i("Ads", "Loading dialog banner (fixed) unit=${adView.adUnitId} size=${AdSize.BANNER.width}x${AdSize.BANNER.height} (dp)")
+            adView.loadAd(AdRequest.Builder().build())
+        }
+
+        dialogBannerAdView = adView
+    }
+
+    private fun bindNativeAdToView(ad: com.google.android.gms.ads.nativead.NativeAd, adView: com.google.android.gms.ads.nativead.NativeAdView) {
+        // Находим сабвью
+        val mediaView = adView.findViewById<com.google.android.gms.ads.nativead.MediaView>(R.id.ad_media)
+        val headline = adView.findViewById<TextView>(R.id.ad_headline)
+        val body = adView.findViewById<TextView>(R.id.ad_body)
+        val cta = adView.findViewById<android.widget.Button>(R.id.ad_call_to_action)
+        val icon = adView.findViewById<android.widget.ImageView>(R.id.ad_app_icon)
+        val advertiser = adView.findViewById<TextView>(R.id.ad_advertiser)
+
+        // Присваиваем представления NativeAdView
+        adView.mediaView = mediaView
+        adView.headlineView = headline
+        adView.bodyView = body
+        adView.callToActionView = cta
+        adView.iconView = icon
+        adView.advertiserView = advertiser
+
+        // Заполняем контент
+        headline.text = ad.headline
+
+        val bodyText = ad.body
+        if (bodyText.isNullOrEmpty()) {
+            body.visibility = View.GONE
+        } else {
+            body.visibility = View.VISIBLE
+            body.text = bodyText
+        }
+
+        val ctaText = ad.callToAction
+        if (ctaText.isNullOrEmpty()) {
+            cta.visibility = View.GONE
+        } else {
+            cta.visibility = View.VISIBLE
+            cta.text = ctaText
+        }
+
+        val iconDrawable = ad.icon?.drawable
+        if (iconDrawable == null) {
+            icon.visibility = View.GONE
+        } else {
+            icon.visibility = View.VISIBLE
+            icon.setImageDrawable(iconDrawable)
+        }
+
+        val advText = ad.advertiser
+        if (advText.isNullOrEmpty()) {
+            advertiser.visibility = View.GONE
+        } else {
+            advertiser.visibility = View.VISIBLE
+            advertiser.text = advText
+        }
+
+        // Назначаем объявление
+        adView.setNativeAd(ad)
+
+        // Необязательно: управление медиа-контролами
+        mediaView.setImageScaleType(android.widget.ImageView.ScaleType.CENTER_CROP)
     }
 }
