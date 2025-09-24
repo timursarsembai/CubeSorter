@@ -33,6 +33,9 @@ import java.util.Date
 import java.util.Locale
 import android.content.pm.ApplicationInfo
 import android.widget.FrameLayout
+import android.widget.LinearLayout
+import android.widget.ImageView
+import android.graphics.Typeface
 
 class SorterActivity : Activity() {
 
@@ -134,6 +137,13 @@ class SorterActivity : Activity() {
     private var timeUpDialog: AlertDialog? = null
     private var timeUpAddButton: android.widget.Button? = null
     private var timeUpRewardStatus: TextView? = null
+
+    // Rewarded extra life
+    private var rewardedExtraLifeManager: RewardedAdManager? = null
+    private var extraLifeUsedThisGameOver = false
+    private var extraLifeDialog: AlertDialog? = null
+    private var extraLifeButton: android.widget.Button? = null
+    private var extraLifeStatus: TextView? = null
 
     // Временные метрики для рекламы
     private var lastBannerLoadStart: Long = 0L
@@ -418,16 +428,16 @@ class SorterActivity : Activity() {
                     val shown = manager.showIfReady(this)
                     if (shown) {
                         pendingShowInterstitialAfterDialog = true
-                    } else {
+                      } else {
                         // Не готово — просто продолжаем
                         sorterGameView.nextRound()
                         manager.preloadIfNeeded()
-                    }
+                      }
                 } else {
-                    sorterGameView.nextRound()
+                  sorterGameView.nextRound()
                 }
             } else {
-                sorterGameView.nextRound()
+              sorterGameView.nextRound()
             }
         }
 
@@ -584,6 +594,7 @@ class SorterActivity : Activity() {
         textMoves.text = "0"
         textTimer.text = getString(R.string.time_zero_tenth)
         resetTimer()
+        extraLifeUsedThisGameOver = false
     }
 
     private fun startTimer() {
@@ -681,19 +692,12 @@ class SorterActivity : Activity() {
             if (livesCurrent > 0) {
                 sorterGameView.jumpToLevel(sorterGameView.currentRound)
             } else {
-                AlertDialog.Builder(this)
-                    .setTitle(getString(R.string.out_of_lives_title))
-                    .setMessage(getString(R.string.out_of_lives_message))
-                    .setPositiveButton(getString(R.string.start_over)) { d, _ ->
-                        d.dismiss()
-                        livesCurrent = livesMax
-                        prefs.edit().putInt(KEY_LIVES_CURRENT, livesCurrent).apply()
-                        updateLivesUI()
-                        saveLevel(1)
-                        sorterGameView.resetAll()
-                    }
-                    .setCancelable(false)
-                    .show()
+                // Если все жизни потрачены — предлагаем rewarded extra life, если ещё не использована
+                if (!extraLifeUsedThisGameOver) {
+                    showExtraLifeGameOverDialog()
+                } else {
+                    showSimpleOutOfLivesDialog()
+                }
             }
         }
 
@@ -840,6 +844,11 @@ class SorterActivity : Activity() {
                 }
             }
             rewardedManager?.preloadIfNeeded()
+            rewardedExtraLifeManager = RewardedAdManager(this, getString(R.string.admob_reward_extra_life), useRewardedInterstitial = false).apply {
+                onAdLoaded = { runOnUiThread { updateExtraLifeUI() } }
+                onAdDismiss = { runOnUiThread { updateExtraLifeUI() } }
+            }
+            rewardedExtraLifeManager?.preloadIfNeeded()
             loadBannerAdIfPresent()
             if (!isPreloadingNative && preloadedNativeAd == null) preloadNativeAd()
             if (!isPreloadingBanner && (preloadedDialogBanner == null || !preloadedBannerLoaded)) preloadDialogBanner()
@@ -1195,8 +1204,132 @@ class SorterActivity : Activity() {
 
         // Назначаем объявление
         adView.setNativeAd(ad)
-
         // Необязательно: управление медиа-контролами
-        mediaView.setImageScaleType(android.widget.ImageView.ScaleType.CENTER_CROP)
+        mediaView.setImageScaleType(ImageView.ScaleType.CENTER_CROP)
+    }
+
+    private fun showSimpleOutOfLivesDialog() {
+        AlertDialog.Builder(this)
+            .setTitle(getString(R.string.out_of_lives_title))
+            .setMessage(getString(R.string.out_of_lives_message))
+            .setPositiveButton(getString(R.string.start_over)) { d, _ ->
+                d.dismiss()
+                livesCurrent = livesMax
+                extraLifeUsedThisGameOver = false
+                prefs.edit().putInt(KEY_LIVES_CURRENT, livesCurrent).apply()
+                updateLivesUI()
+                saveLevel(1)
+                sorterGameView.resetAll()
+            }
+            .setCancelable(false)
+            .show()
+    }
+
+    private fun showExtraLifeGameOverDialog() {
+        extraLifeDialog?.dismiss()
+        // Инициируем прелоад (если вдруг ещё не загрузилось или предыдущие попытки исчерпаны)
+        rewardedExtraLifeManager?.preloadIfNeeded()
+        val root = LinearLayout(this).apply {
+            orientation = LinearLayout.VERTICAL
+            setPadding(48,48,48,32)
+        }
+        val title = TextView(this).apply {
+            text = getString(R.string.reward_extra_life_title)
+            setTypeface(typeface, Typeface.BOLD)
+            textSize = 19f
+            setTextColor(Color.BLACK)
+        }
+        val msg = TextView(this).apply {
+            text = getString(R.string.reward_extra_life_message)
+            textSize = 14f
+            setTextColor(Color.DKGRAY)
+        }
+        val status = TextView(this).apply {
+            text = getString(R.string.reward_extra_life_loading)
+            textSize = 12f
+            setTextColor(Color.GRAY)
+            setPadding(0,16,0,0)
+        }
+        val buttons = LinearLayout(this).apply {
+            orientation = LinearLayout.HORIZONTAL
+            setPadding(0,24,0,0)
+        }
+        val btnGet = android.widget.Button(this).apply { text = getString(R.string.reward_extra_life_button) }
+        val btnStartOver = android.widget.Button(this).apply { text = getString(R.string.reward_extra_life_start_over); setPadding(32,0,0,0) }
+        buttons.addView(btnGet)
+        buttons.addView(btnStartOver)
+        root.addView(title)
+        root.addView(msg)
+        root.addView(buttons)
+        root.addView(status)
+
+        val dialog = AlertDialog.Builder(this)
+            .setView(root)
+            .setCancelable(false)
+            .create()
+        extraLifeDialog = dialog
+        extraLifeButton = btnGet
+        extraLifeStatus = status
+
+        fun update() = updateExtraLifeUI()
+
+        btnGet.setOnClickListener {
+            val mgr = rewardedExtraLifeManager
+            if (mgr != null && mgr.isReady() && !extraLifeUsedThisGameOver) {
+                btnGet.isEnabled = false
+                status.text = getString(R.string.reward_extra_life_loading)
+                val shown = mgr.showIfReady(this) {
+                    handler.post { grantExtraLifeAndResume() }
+                }
+                if (!shown) {
+                    status.text = getString(R.string.reward_extra_life_unavailable)
+                    update()
+                }
+            } else update()
+        }
+        btnStartOver.setOnClickListener {
+            dialog.dismiss()
+            livesCurrent = livesMax
+            extraLifeUsedThisGameOver = false
+            prefs.edit().putInt(KEY_LIVES_CURRENT, livesCurrent).apply()
+            updateLivesUI()
+            saveLevel(1)
+            sorterGameView.resetAll()
+        }
+        dialog.setOnShowListener { update() }
+        dialog.setOnDismissListener {
+            if (extraLifeDialog === dialog) {
+                extraLifeDialog = null; extraLifeButton = null; extraLifeStatus = null
+            }
+        }
+        dialog.show()
+    }
+
+    private fun grantExtraLifeAndResume() {
+        if (extraLifeUsedThisGameOver) return
+        extraLifeUsedThisGameOver = true
+        livesCurrent = 1
+        prefs.edit().putInt(KEY_LIVES_CURRENT, livesCurrent).apply()
+        updateLivesUI()
+        runOnUiThread {
+            Toast.makeText(this, getString(R.string.reward_extra_life_granted), Toast.LENGTH_SHORT).show()
+            extraLifeDialog?.dismiss()
+            sorterGameView.jumpToLevel(sorterGameView.currentRound)
+        }
+    }
+
+    private fun updateExtraLifeUI() {
+        val dlg = extraLifeDialog ?: return
+        if (!dlg.isShowing) return
+        val btn = extraLifeButton ?: return
+        val status = extraLifeStatus ?: return
+        val mgr = rewardedExtraLifeManager
+        when {
+            extraLifeUsedThisGameOver -> { btn.isEnabled = false; status.text = getString(R.string.reward_extra_life_already_used) }
+            mgr == null -> { btn.isEnabled = false; status.text = getString(R.string.reward_extra_life_unavailable) }
+            mgr.isLoading() && !mgr.isReady() -> { btn.isEnabled = false; status.text = getString(R.string.reward_extra_life_loading) }
+            !mgr.isReady() -> { btn.isEnabled = false; status.text = getString(R.string.reward_extra_life_unavailable) }
+            else -> { btn.isEnabled = true; status.text = getString(R.string.reward_extra_life_hint) }
+        }
     }
 }

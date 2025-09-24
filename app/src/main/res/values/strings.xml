@@ -95,4 +95,17 @@
     <string name="reward_granted">+10 seconds added!</string>
     <string name="reward_already_used">Bonus already used this round</string>
     <string name="time_up_message_new">Time is up. You can retry or watch an ad for +10s.</string>
+    <!-- Added rewarded extra life strings -->
+    <!-- Rewarded extra life ad unit (test). Real: ca-app-pub-8956179513137325/8783503144 -->
+    <string name="admob_reward_extra_life">ca-app-pub-3940256099942544/5224354917</string>
+    <string name="reward_extra_life_button">Get 1 life</string>
+    <string name="reward_extra_life_hint">Watch an ad to get +1 life (once per game over)</string>
+    <string name="reward_extra_life_loading">Loading…</string>
+    <string name="reward_extra_life_unavailable">Ad not ready</string>
+    <string name="reward_extra_life_granted">Extra life granted!</string>
+    <string name="reward_extra_life_already_used">Extra life already used</string>
+    <string name="reward_extra_life_start_over">Start over</string>
+    <string name="reward_extra_life_cancel">Cancel</string>
+    <string name="reward_extra_life_title">Out of lives</string>
+    <string name="reward_extra_life_message">You spent all lives. Watch an ad to get 1 extra life?</string>
 </resources>
