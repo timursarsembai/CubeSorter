@@ -125,6 +125,20 @@ class SorterActivity : Activity() {
     private val interstitialTargetRounds = setOf(5,10,15,20,25,30,35,40)
     private var pendingShowInterstitialAfterDialog = false
 
+    // Rewarded (time bonus)
+    private var rewardedManager: RewardedAdManager? = null
+    private var rewardUsedThisTimeUp = false
+    private var rewardUsedThisRound = false
+    private var pendingRewardEarned = false
+    // Ссылки на открытый диалог TimeUp для обновления статуса при поздней загрузке
+    private var timeUpDialog: AlertDialog? = null
+    private var timeUpAddButton: android.widget.Button? = null
+    private var timeUpRewardStatus: TextView? = null
+
+    // Временные метрики для рекламы
+    private var lastBannerLoadStart: Long = 0L
+    private var forcingBannerReload = false
+
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
         setContentView(R.layout.activity_sorter)
@@ -287,6 +301,7 @@ class SorterActivity : Activity() {
             if (!isPreloadingBanner && (preloadedDialogBanner == null || !preloadedBannerLoaded)) preloadDialogBanner()
             // Прелоадим интерстициал если нужно
             interstitialManager?.preloadIfNeeded()
+            rewardUsedThisRound = false
         }
 
         sorterGameView.onRoundCompleted = { round, moves ->
@@ -616,35 +631,106 @@ class SorterActivity : Activity() {
     private fun onTimeUp() {
         timeUpHandled = true
         pauseTimer()
-        livesCurrent = (livesCurrent - 1).coerceAtLeast(0)
-        prefs.edit().putInt(KEY_LIVES_CURRENT, livesCurrent).apply()
-        updateLivesUI()
-        if (livesCurrent > 0) {
-            AlertDialog.Builder(this)
-                .setTitle(getString(R.string.time_up_title))
-                .setMessage(getString(R.string.time_up_message))
-                .setPositiveButton(getString(R.string.try_again)) { d, _ ->
-                    d.dismiss()
-                    sorterGameView.jumpToLevel(sorterGameView.currentRound)
+        // Ранее сразу списывали жизнь. Теперь показываем диалог выбора.
+        showTimeUpDialog()
+    }
+
+    private fun showTimeUpDialog() {
+        rewardUsedThisTimeUp = false
+        pendingRewardEarned = false
+        val inflater = LayoutInflater.from(this)
+        val view = inflater.inflate(R.layout.dialog_time_up, null, false)
+        val btnAdd = view.findViewById<android.widget.Button>(R.id.buttonAddTime)
+        val btnTry = view.findViewById<android.widget.Button>(R.id.buttonTryAgain)
+        val btnCancel = view.findViewById<android.widget.Button>(R.id.buttonCancel)
+        val status = view.findViewById<TextView>(R.id.textRewardStatus)
+        val dialog = AlertDialog.Builder(this)
+            .setView(view)
+            .setCancelable(false)
+            .create()
+        timeUpDialog = dialog
+        timeUpAddButton = btnAdd
+        timeUpRewardStatus = status
+
+        fun updateAddButtonState() { updateTimeUpRewardUI() }
+
+        btnAdd.setOnClickListener {
+            val mgr = rewardedManager
+            if (mgr != null && mgr.isReady() && !rewardUsedThisTimeUp && !rewardUsedThisRound) {
+                btnAdd.isEnabled = false
+                status.text = getString(R.string.reward_loading)
+                val shown = mgr.showIfReady(this) {
+                    // Ставим флаг, но время добавим после закрытия (onAdDismiss)
+                    pendingRewardEarned = true
                 }
-                .setNegativeButton(getString(R.string.cancel)) { d, _ -> d.dismiss() }
-                .setCancelable(false)
-                .show()
-        } else {
-            AlertDialog.Builder(this)
-                .setTitle(getString(R.string.out_of_lives_title))
-                .setMessage(getString(R.string.out_of_lives_message))
-                .setPositiveButton(getString(R.string.start_over)) { d, _ ->
-                    d.dismiss()
-                    livesCurrent = livesMax
-                    prefs.edit().putInt(KEY_LIVES_CURRENT, livesCurrent).apply()
-                    updateLivesUI()
-                    saveLevel(1)
-                    sorterGameView.resetAll()
+                if (!shown) {
+                    status.text = getString(R.string.reward_unavailable)
+                    updateAddButtonState()
                 }
-                .setCancelable(false)
-                .show()
+            } else {
+                updateAddButtonState()
+            }
         }
+
+        btnTry.setOnClickListener {
+            livesCurrent = (livesCurrent - 1).coerceAtLeast(0)
+            prefs.edit().putInt(KEY_LIVES_CURRENT, livesCurrent).apply()
+            updateLivesUI()
+            dialog.dismiss()
+            timeUpDialog = null; timeUpAddButton = null; timeUpRewardStatus = null
+            if (livesCurrent > 0) {
+                sorterGameView.jumpToLevel(sorterGameView.currentRound)
+            } else {
+                AlertDialog.Builder(this)
+                    .setTitle(getString(R.string.out_of_lives_title))
+                    .setMessage(getString(R.string.out_of_lives_message))
+                    .setPositiveButton(getString(R.string.start_over)) { d, _ ->
+                        d.dismiss()
+                        livesCurrent = livesMax
+                        prefs.edit().putInt(KEY_LIVES_CURRENT, livesCurrent).apply()
+                        updateLivesUI()
+                        saveLevel(1)
+                        sorterGameView.resetAll()
+                    }
+                    .setCancelable(false)
+                    .show()
+            }
+        }
+
+        btnCancel.setOnClickListener {
+            dialog.dismiss()
+            timeUpDialog = null; timeUpAddButton = null; timeUpRewardStatus = null
+        }
+
+        dialog.setOnShowListener { updateAddButtonState() }
+        dialog.setOnDismissListener { if (timeUpDialog === dialog) { timeUpDialog = null; timeUpAddButton = null; timeUpRewardStatus = null } }
+        dialog.show()
+    }
+
+    private fun updateTimeUpRewardUI() {
+        val btn = timeUpAddButton ?: return
+        val status = timeUpRewardStatus ?: return
+        val mgr = rewardedManager
+        when {
+            timeUpDialog == null || timeUpDialog?.isShowing != true -> return
+            rewardUsedThisRound -> { btn.isEnabled = false; status.text = getString(R.string.reward_already_used) }
+            rewardUsedThisTimeUp -> { btn.isEnabled = false; status.text = getString(R.string.reward_already_used) }
+            mgr == null || (!mgr.isReady() && !mgr.isLoading()) -> { btn.isEnabled = false; status.text = getString(R.string.reward_unavailable) }
+            mgr.isLoading() && !mgr.isReady() -> { btn.isEnabled = false; status.text = getString(R.string.reward_loading) }
+            else -> { btn.isEnabled = true; status.text = getString(R.string.reward_add_time_hint) }
+        }
+    }
+
+    private fun addBonusTimeSeconds(sec: Int) {
+        val bonusMs = sec * 1000L
+        deadlineMs = System.currentTimeMillis() + bonusMs
+        timeUpHandled = false
+        startTime = 0L
+        if (!isTimerRunning) {
+            isTimerRunning = true
+            handler.post(timerRunnable)
+        }
+        updateTimer()
     }
 
     // ==== Жизни и сложность: утилиты ====
@@ -722,27 +808,39 @@ class SorterActivity : Activity() {
     private fun initMobileAdsIfNeeded() {
         if (adsInitialized) return
         adsInitialized = true
-        // Включаем тестовые устройства только для debug-сборок
         val isDebug = (applicationInfo.flags and ApplicationInfo.FLAG_DEBUGGABLE) != 0
         if (isDebug) {
-            val testDeviceIds = listOf(
-                com.google.android.gms.ads.AdRequest.DEVICE_ID_EMULATOR
-                // Добавьте сюда ID своего физического устройства после того, как увидите его в логах
-                // "ABCDEF0123456789ABCDEFFEDCBA9876"
-            )
-            val requestConfiguration = com.google.android.gms.ads.RequestConfiguration.Builder()
+            val testDeviceIds = listOf(AdRequest.DEVICE_ID_EMULATOR)
+            val requestConfiguration = RequestConfiguration.Builder()
                 .setTestDeviceIds(testDeviceIds)
                 .build()
-            com.google.android.gms.ads.MobileAds.setRequestConfiguration(requestConfiguration)
+            MobileAds.setRequestConfiguration(requestConfiguration)
         }
-        com.google.android.gms.ads.MobileAds.initialize(this) { status ->
+        MobileAds.initialize(this) { status ->
             android.util.Log.d("Ads", "MobileAds initialized: $status")
-            // Инициализируем менеджер интерстициала
             interstitialManager = InterstitialAdManager(this, getString(R.string.admob_interstitial_rounds))
             interstitialManager?.preloadIfNeeded()
-            // После инициализации загружаем баннер, если он есть в разметке
+            rewardedManager = RewardedAdManager(this, getString(R.string.admob_reward_time_bonus), useRewardedInterstitial = true).apply {
+                onAdLoaded = { runOnUiThread { updateTimeUpRewardUI() } }
+                onAdDismiss = {
+                    // Реклама закрыта: если пользователь заработал награду, применяем бонус сейчас
+                    if (pendingRewardEarned) {
+                        pendingRewardEarned = false
+                        rewardUsedThisTimeUp = true
+                        rewardUsedThisRound = true
+                        addBonusTimeSeconds(10)
+                        runOnUiThread {
+                            Toast.makeText(this@SorterActivity, getString(R.string.reward_granted), Toast.LENGTH_SHORT).show()
+                            timeUpDialog?.dismiss()
+                        }
+                    } else {
+                        // Обновим UI в случае отмены
+                        runOnUiThread { updateTimeUpRewardUI() }
+                    }
+                }
+            }
+            rewardedManager?.preloadIfNeeded()
             loadBannerAdIfPresent()
-            // И сразу прелоадим рекламу для модалки
             if (!isPreloadingNative && preloadedNativeAd == null) preloadNativeAd()
             if (!isPreloadingBanner && (preloadedDialogBanner == null || !preloadedBannerLoaded)) preloadDialogBanner()
         }
@@ -800,7 +898,10 @@ class SorterActivity : Activity() {
         loadBannerIntoContainer(container, useAdaptive = true)
     }
 
-    private fun loadBannerIntoContainer(container: FrameLayout, useAdaptive: Boolean) {
+    private fun loadBannerIntoContainer(container: FrameLayout, useAdaptive: Boolean, internalFallback: Boolean = false) {
+        // Убрали throttle: он мешал немедленному фолбэку (adaptive -> fixed) т.к. повторный вызов происходил <1s
+        lastBannerLoadStart = System.currentTimeMillis()
+
         // Очистим предыдущий баннер, если был
         bannerAdView?.let { old ->
             try { container.removeView(old) } catch (_: Exception) {}
@@ -810,6 +911,8 @@ class SorterActivity : Activity() {
 
         val adView = AdView(this)
         adView.adUnitId = getString(R.string.admob_banner_home)
+        // Дополнительный лог
+        android.util.Log.i("Ads", "Banner init (useAdaptive=$useAdaptive) unit=${adView.adUnitId}")
         adView.visibility = View.GONE
         adView.adListener = object : AdListener() {
             override fun onAdLoaded() {
@@ -817,32 +920,45 @@ class SorterActivity : Activity() {
                 mainBannerRetryAttempts = 0
                 container.visibility = View.VISIBLE
                 adView.visibility = View.VISIBLE
+                android.util.Log.i("Ads", "Banner loaded (useAdaptive=$useAdaptive) size=${adView.adSize?.width}x${adView.adSize?.height}")
             }
             override fun onAdFailedToLoad(adError: LoadAdError) {
-                android.util.Log.e("Ads", "Banner failed to load: ${adError.code} ${adError.message}")
-                // Если баннер уже показывался — не скрываем контейнер (сохраняем последнюю удачную загрузку)
+                android.util.Log.e("Ads", "Banner failed (useAdaptive=$useAdaptive): code=${adError.code} msg=${adError.message}")
+                // Если баннер уже показывался — не скрываем контейнер
                 if (mainBannerHadFill) return
-                // Иначе — обрабатываем фолбэк и ретраи
                 adView.visibility = View.GONE
                 container.visibility = View.GONE
-                if (useAdaptive && !bannerFallbackTried && adError.code == 3) {
+                // Универсальный фолбэк: первая неудачная попытка адаптивного -> сразу пробуем фиксированный, независимо от кода
+                if (useAdaptive && !bannerFallbackTried) {
                     bannerFallbackTried = true
-                    android.util.Log.w("Ads", "Adaptive no fill, retrying with fixed BANNER once...")
-                    loadBannerIntoContainer(container, useAdaptive = false)
+                    android.util.Log.w("Ads", "Adaptive failed (code=${adError.code}), try fixed once ...")
+                    loadBannerIntoContainer(container, useAdaptive = false, internalFallback = true)
+                    return
+                }
+                // План ретраев (15 сек * 3) затем keep-alive раз в 60 сек
+                if (mainBannerRetryAttempts < maxMainBannerRetries) {
+                    mainBannerRetryAttempts++
+                    val delay = 15_000L
+                    android.util.Log.w("Ads", "Bottom banner retry ${mainBannerRetryAttempts}/$maxMainBannerRetries in ${delay}ms")
+                    handler.postDelayed({
+                        if (!isFinishing && !isDestroyed && !mainBannerHadFill) {
+                            bannerFallbackTried = false
+                            loadBannerIntoContainer(container, useAdaptive = true)
+                        }
+                    }, delay)
                 } else {
-                    // Планируем повторную попытку через 15 сек, не более 3 раз
-                    if (mainBannerRetryAttempts < maxMainBannerRetries) {
-                        mainBannerRetryAttempts++
-                        android.util.Log.w(
-                            "Ads",
-                            "Bottom banner no fill. Retry ${mainBannerRetryAttempts}/$maxMainBannerRetries in 15000ms"
-                        )
-                        handler.postDelayed({
-                            if (!isFinishing && !isDestroyed) {
+                    if (!forcingBannerReload) {
+                        forcingBannerReload = true
+                        android.util.Log.w("Ads", "Schedule keep-alive banner reload every 60s")
+                        handler.postDelayed(object: Runnable {
+                            override fun run() {
+                                if (isFinishing || isDestroyed || mainBannerHadFill) { forcingBannerReload = false; return }
+                                android.util.Log.w("Ads", "Keep-alive banner attempt ...")
                                 bannerFallbackTried = false
                                 loadBannerIntoContainer(container, useAdaptive = true)
+                                handler.postDelayed(this, 60_000)
                             }
-                        }, 15_000)
+                        }, 60_000)
                     }
                 }
             }

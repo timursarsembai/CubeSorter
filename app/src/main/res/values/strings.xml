@@ -86,4 +86,13 @@
 
     <!-- Interstitial ad unit (test). Real: ca-app-pub-8956179513137325/3166051245 -->
     <string name="admob_interstitial_rounds">ca-app-pub-3940256099942544/1033173712</string>
+    <string name="admob_reward_time_bonus">ca-app-pub-3940256099942544/5354046379</string>
+    <string name="reward_add_time_button">Add 10 sec</string>
+    <string name="reward_add_time_hint">Watch an ad to gain +10 seconds (once per round)</string>
+    <string name="reward_loading">Loading…</string>
+    <string name="reward_unavailable">Ad not ready</string>
+    <string name="reward_failed">Ad failed. Try again later.</string>
+    <string name="reward_granted">+10 seconds added!</string>
+    <string name="reward_already_used">Bonus already used this round</string>
+    <string name="time_up_message_new">Time is up. You can retry or watch an ad for +10s.</string>
 </resources>
