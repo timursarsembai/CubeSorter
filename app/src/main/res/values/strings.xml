@@ -83,4 +83,7 @@
     <!-- AdMob banner unit id: Level complete dialog fallback (тестовый) -->
     <string name="admob_banner_dialog_fallback">ca-app-pub-3940256099942544/9214589741</string>
     <string name="admob_banner_test_fixed">ca-app-pub-3940256099942544/6300978111</string>
+
+    <!-- Interstitial ad unit (test). Real: ca-app-pub-8956179513137325/3166051245 -->
+    <string name="admob_interstitial_rounds">ca-app-pub-3940256099942544/1033173712</string>
 </resources>

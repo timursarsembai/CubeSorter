@@ -120,6 +120,11 @@ class SorterActivity : Activity() {
     private var isPreloadingBanner = false
     private var preloadedBannerLoaded = false
 
+    // Interstitial (каждые 5 раундов)
+    private var interstitialManager: InterstitialAdManager? = null
+    private val interstitialTargetRounds = setOf(5,10,15,20,25,30,35,40)
+    private var pendingShowInterstitialAfterDialog = false
+
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
         setContentView(R.layout.activity_sorter)
@@ -280,6 +285,8 @@ class SorterActivity : Activity() {
             // Пробуем прелоадить рекламу для модалки
             if (!isPreloadingNative && preloadedNativeAd == null) preloadNativeAd()
             if (!isPreloadingBanner && (preloadedDialogBanner == null || !preloadedBannerLoaded)) preloadDialogBanner()
+            // Прелоадим интерстициал если нужно
+            interstitialManager?.preloadIfNeeded()
         }
 
         sorterGameView.onRoundCompleted = { round, moves ->
@@ -379,7 +386,34 @@ class SorterActivity : Activity() {
             dialog.dismiss(); sorterGameView.jumpToLevel(sorterGameView.currentRound)
         }
         btnNext.setOnClickListener {
-            dialog.dismiss(); sorterGameView.nextRound()
+            dialog.dismiss()
+            // Логика показа межстраничной рекламы
+            if (round in interstitialTargetRounds) {
+                val manager = interstitialManager
+                if (manager != null) {
+                    // Настраиваем коллбек, чтобы перейти к следующему раунду после закрытия
+                    manager.onDismissCallback = {
+                        // Сбрасываем флаг и идём к следующему уровню
+                        pendingShowInterstitialAfterDialog = false
+                        sorterGameView.nextRound()
+                    }
+                    manager.onShowCallback = {
+                        android.util.Log.i("Ads", "Interstitial start for round $round")
+                    }
+                    val shown = manager.showIfReady(this)
+                    if (shown) {
+                        pendingShowInterstitialAfterDialog = true
+                    } else {
+                        // Не готово — просто продолжаем
+                        sorterGameView.nextRound()
+                        manager.preloadIfNeeded()
+                    }
+                } else {
+                    sorterGameView.nextRound()
+                }
+            } else {
+                sorterGameView.nextRound()
+            }
         }
 
         // Сначала пробуем показать прелоад, чтобы не делать запросы в момент показа
@@ -703,6 +737,9 @@ class SorterActivity : Activity() {
         }
         com.google.android.gms.ads.MobileAds.initialize(this) { status ->
             android.util.Log.d("Ads", "MobileAds initialized: $status")
+            // Инициализируем менеджер интерстициала
+            interstitialManager = InterstitialAdManager(this, getString(R.string.admob_interstitial_rounds))
+            interstitialManager?.preloadIfNeeded()
             // После инициализации загружаем баннер, если он есть в разметке
             loadBannerAdIfPresent()
             // И сразу прелоадим рекламу для модалки
