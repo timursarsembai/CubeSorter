@@ -108,4 +108,23 @@
     <string name="reward_extra_life_cancel">Cancel</string>
     <string name="reward_extra_life_title">Out of lives</string>
     <string name="reward_extra_life_message">You spent all lives. Watch an ad to get 1 extra life?</string>
+
+    <!-- Remove Ads screen -->
+    <string name="remove_ads">Remove Ads</string>
+    <string name="remove_ads_title">Remove Ads</string>
+    <string name="remove_ads_description">Pay once to permanently remove all advertising in the game.</string>
+    <string name="remove_ads_benefit_1">No banners, interstitial or native ads</string>
+    <string name="remove_ads_benefit_2">Cleaner and faster experience</string>
+    <string name="remove_ads_benefit_3">One-time purchase, lifetime effect</string>
+    <string name="remove_ads_buy">Buy – %1$s</string>
+    <string name="remove_ads_restore">Restore</string>
+    <string name="remove_ads_status_active">Status: Active</string>
+    <string name="remove_ads_status_not">Status: Not purchased</string>
+    <string name="remove_ads_status_pending">Status: Pending…</string>
+    <string name="remove_ads_loading">Loading…</string>
+    <string name="remove_ads_error">Unable to load product info. Please try again.</string>
+    <string name="remove_ads_purchase_success">Purchase successful. Ads removed.</string>
+    <string name="remove_ads_already_owned">Already owned.</string>
+    <string name="remove_ads_restore_success">Restored successfully.</string>
+    <string name="ads_removed_label">Ads removed</string>
 </resources>

@@ -47,27 +47,31 @@ open class BaseDrawerActivity : AppCompatActivity() {
         // Пункты меню
         findViewById<TextView?>(R.id.menuStartGame)?.setOnClickListener {
             // Переход на главный экран (игра)
-            val intent = Intent(this, SorterActivity::class.java)
+            val intent = Intent(this@BaseDrawerActivity, SorterActivity::class.java)
             intent.addFlags(Intent.FLAG_ACTIVITY_CLEAR_TOP or Intent.FLAG_ACTIVITY_SINGLE_TOP)
             startActivity(intent)
             drawerLayout.closeDrawer(GravityCompat.START)
         }
         findViewById<TextView?>(R.id.menuDifficulty)?.setOnClickListener {
-            if (this !is DifficultyActivity) {
-                startActivity(Intent(this, DifficultyActivity::class.java))
+            if (this@BaseDrawerActivity !is DifficultyActivity) {
+                startActivity(Intent(this@BaseDrawerActivity, DifficultyActivity::class.java))
             }
             drawerLayout.closeDrawer(GravityCompat.START)
         }
         findViewById<TextView?>(R.id.menuRecords)?.setOnClickListener {
-            if (this !is RecordsActivity) {
-                startActivity(Intent(this, RecordsActivity::class.java))
+            if (this@BaseDrawerActivity !is RecordsActivity) {
+                startActivity(Intent(this@BaseDrawerActivity, RecordsActivity::class.java))
             }
             drawerLayout.closeDrawer(GravityCompat.START)
         }
         findViewById<TextView?>(R.id.menuReset)?.setOnClickListener {
-            if (this !is ResetActivity) {
-                startActivity(Intent(this, ResetActivity::class.java))
+            if (this@BaseDrawerActivity !is ResetActivity) {
+                startActivity(Intent(this@BaseDrawerActivity, ResetActivity::class.java))
             }
+            drawerLayout.closeDrawer(GravityCompat.START)
+        }
+        findViewById<TextView?>(R.id.menuRemoveAds)?.setOnClickListener {
+            startActivity(Intent(this@BaseDrawerActivity, RemoveAdsActivity::class.java))
             drawerLayout.closeDrawer(GravityCompat.START)
         }
     }

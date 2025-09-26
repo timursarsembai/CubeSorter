@@ -81,4 +81,21 @@
         android:clickable="true"
         android:focusable="true" />
 
+    <View
+        android:layout_width="match_parent"
+        android:layout_height="1dp"
+        android:background="#1F000000" />
+
+    <TextView
+        android:id="@+id/menuRemoveAds"
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:text="@string/remove_ads"
+        android:textColor="@color/text_color"
+        android:textSize="16sp"
+        android:padding="12dp"
+        android:background="@android:color/transparent"
+        android:clickable="true"
+        android:focusable="true" />
+
 </LinearLayout>

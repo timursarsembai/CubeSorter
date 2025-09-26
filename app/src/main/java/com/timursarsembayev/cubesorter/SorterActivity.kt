@@ -53,6 +53,7 @@ class SorterActivity : Activity() {
     private lateinit var menuDifficulty: TextView
     private lateinit var menuRecords: TextView
     private lateinit var menuReset: TextView
+    private lateinit var menuRemoveAds: TextView
 
     // Жизни
     private lateinit var textLivesHeader: TextView
@@ -168,9 +169,12 @@ class SorterActivity : Activity() {
             timeLimitMs = computeTimeLimitMs(sorterGameView.currentRound)
         }
         updateLivesUI()
-
-        // Сначала UMP-согласие, затем инициализация Mobile Ads
-        requestConsentThenInitAds()
+        if (BillingManager.isAdsRemoved()) {
+            // Скрываем контейнер баннера, не инициализируем MobileAds/UMP
+            findViewById<FrameLayout?>(R.id.adContainer)?.visibility = View.GONE
+        } else {
+            requestConsentThenInitAds()
+        }
     }
 
     override fun onResume() {
@@ -244,6 +248,7 @@ class SorterActivity : Activity() {
         menuDifficulty = findViewById(R.id.menuDifficulty)
         menuRecords = findViewById(R.id.menuRecords)
         menuReset = findViewById(R.id.menuReset)
+        menuRemoveAds = findViewById(R.id.menuRemoveAds)
     }
 
     private fun setupDrawer() {
@@ -264,6 +269,10 @@ class SorterActivity : Activity() {
         }
         menuReset.setOnClickListener {
             startActivity(Intent(this, ResetActivity::class.java))
+            drawerLayout.closeDrawer(GravityCompat.START)
+        }
+        menuRemoveAds.setOnClickListener {
+            startActivity(Intent(this, RemoveAdsActivity::class.java))
             drawerLayout.closeDrawer(GravityCompat.START)
         }
     }
@@ -441,35 +450,40 @@ class SorterActivity : Activity() {
             }
         }
 
-        // Сначала пробуем показать прелоад, чтобы не делать запросы в момент показа
-        nativeContainer?.let { container ->
-            container.visibility = View.GONE
-            when {
-                preloadedNativeAd != null -> {
-                    val ad = preloadedNativeAd!!
-                    preloadedNativeAd = null
-                    val adView = layoutInflater.inflate(R.layout.ad_native_level_completed, null) as com.google.android.gms.ads.nativead.NativeAdView
-                    bindNativeAdToView(ad, adView)
-                    container.removeAllViews(); container.addView(adView)
-                    container.visibility = View.VISIBLE
-                    android.util.Log.i("Ads", "Shown preloaded Native in dialog")
-                    // Сразу запускаем следующий прелоад
-                    preloadNativeAd()
-                }
-                preloadedDialogBanner != null && preloadedBannerLoaded -> {
-                    val banner = preloadedDialogBanner!!
-                    preloadedDialogBanner = null
-                    preloadedBannerLoaded = false
-                    if (banner.parent != null) (banner.parent as? ViewGroup)?.removeView(banner)
-                    container.removeAllViews(); container.addView(banner)
-                    container.visibility = View.VISIBLE
-                    android.util.Log.i("Ads", "Shown preloaded dialog banner")
-                    // Запускаем следующий прелоад
-                    preloadDialogBanner()
-                }
-                else -> {
-                    // Если прелоада нет — используем текущую цепочку загрузки
-                    loadNativeAdIntoContainer(container)
+        // Рекламный контейнер: если реклама отключена — скрываем и не грузим
+        if (BillingManager.isAdsRemoved()) {
+            nativeContainer.visibility = View.GONE
+        } else {
+            // Сначала пробуем показать прелоад, чтобы не делать запросы в момент показа
+            nativeContainer?.let { container ->
+                container.visibility = View.GONE
+                when {
+                    preloadedNativeAd != null -> {
+                        val ad = preloadedNativeAd!!
+                        preloadedNativeAd = null
+                        val adView = layoutInflater.inflate(R.layout.ad_native_level_completed, null) as com.google.android.gms.ads.nativead.NativeAdView
+                        bindNativeAdToView(ad, adView)
+                        container.removeAllViews(); container.addView(adView)
+                        container.visibility = View.VISIBLE
+                        android.util.Log.i("Ads", "Shown preloaded Native in dialog")
+                        // Сразу запускаем следующий прелоад
+                        preloadNativeAd()
+                    }
+                    preloadedDialogBanner != null && preloadedBannerLoaded -> {
+                        val banner = preloadedDialogBanner!!
+                        preloadedDialogBanner = null
+                        preloadedBannerLoaded = false
+                        if (banner.parent != null) (banner.parent as? ViewGroup)?.removeView(banner)
+                        container.removeAllViews(); container.addView(banner)
+                        container.visibility = View.VISIBLE
+                        android.util.Log.i("Ads", "Shown preloaded dialog banner")
+                        // Запускаем следующий прелоад
+                        preloadDialogBanner()
+                    }
+                    else -> {
+                        // Если прелоада нет — используем текущую цепочку загрузки
+                        loadNativeAdIntoContainer(container)
+                    }
                 }
             }
         }
@@ -789,6 +803,7 @@ class SorterActivity : Activity() {
 
     // Инициализация UMP + Mobile Ads (покажет форму согласия при необходимости)
     private fun requestConsentThenInitAds() {
+        if (BillingManager.isAdsRemoved()) return
         val params = ConsentRequestParameters.Builder().build()
         val consentInformation = UserMessagingPlatform.getConsentInformation(this)
         consentInformation.requestConsentInfoUpdate(
@@ -810,6 +825,7 @@ class SorterActivity : Activity() {
     }
 
     private fun initMobileAdsIfNeeded() {
+        if (BillingManager.isAdsRemoved()) return
         if (adsInitialized) return
         adsInitialized = true
         val isDebug = (applicationInfo.flags and ApplicationInfo.FLAG_DEBUGGABLE) != 0
@@ -902,6 +918,10 @@ class SorterActivity : Activity() {
     }
 
     private fun loadBannerAdIfPresent() {
+        if (BillingManager.isAdsRemoved()) {
+            findViewById<FrameLayout?>(R.id.adContainer)?.visibility = View.GONE
+            return
+        }
         val container = findViewById<FrameLayout?>(R.id.adContainer) ?: return
         bannerFallbackTried = false
         loadBannerIntoContainer(container, useAdaptive = true)
@@ -1226,6 +1246,7 @@ class SorterActivity : Activity() {
     }
 
     private fun showExtraLifeGameOverDialog() {
+        if (BillingManager.isAdsRemoved()) { showSimpleOutOfLivesDialog(); return }
         extraLifeDialog?.dismiss()
         // Инициируем прелоад (если вдруг ещё не загрузилось или предыдущие попытки исчерпаны)
         rewardedExtraLifeManager?.preloadIfNeeded()
