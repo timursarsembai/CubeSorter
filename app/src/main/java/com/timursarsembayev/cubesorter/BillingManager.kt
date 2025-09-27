@@ -13,6 +13,11 @@ object BillingManager : PurchasesUpdatedListener {
     private const val PRODUCT_ID_REMOVE_ADS = "remove_ads" // Configure in Play Console
     private const val PREFS = "billing_prefs"
     private const val KEY_ADS_REMOVED = "ads_removed"
+    // Admin override: 0 = none, 1 = force_hide (treat ads as removed), 2 = force_show
+    private const val KEY_ADS_OVERRIDE = "ads_override"
+    const val OVERRIDE_NONE = 0
+    const val OVERRIDE_FORCE_HIDE = 1
+    const val OVERRIDE_FORCE_SHOW = 2
 
     private var billingClient: BillingClient? = null
     private var productDetails: ProductDetails? = null
@@ -57,10 +62,26 @@ object BillingManager : PurchasesUpdatedListener {
 
     private fun prefs() = appContext.getSharedPreferences(PREFS, Context.MODE_PRIVATE)
 
-    fun isAdsRemoved(): Boolean = prefs().getBoolean(KEY_ADS_REMOVED, false)
+    fun getAdsOverride(): Int = prefs().getInt(KEY_ADS_OVERRIDE, OVERRIDE_NONE)
+
+    fun setAdsOverride(value: Int) {
+        if (value !in OVERRIDE_NONE..OVERRIDE_FORCE_SHOW) return
+        prefs().edit().putInt(KEY_ADS_OVERRIDE, value).apply()
+        onStatusChanged?.invoke()
+    }
+
+    fun clearAdsOverride() { setAdsOverride(OVERRIDE_NONE) }
+
+    fun isAdsRemoved(): Boolean {
+        return when (getAdsOverride()) {
+            OVERRIDE_FORCE_HIDE -> true
+            OVERRIDE_FORCE_SHOW -> false
+            else -> prefs().getBoolean(KEY_ADS_REMOVED, false)
+        }
+    }
 
     private fun setAdsRemoved() {
-        if (!isAdsRemoved()) {
+        if (!prefs().getBoolean(KEY_ADS_REMOVED, false)) {
             prefs().edit().putBoolean(KEY_ADS_REMOVED, true).apply()
             onStatusChanged?.invoke()
         }

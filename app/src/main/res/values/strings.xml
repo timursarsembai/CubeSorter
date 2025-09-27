@@ -127,4 +127,12 @@
     <string name="remove_ads_already_owned">Already owned.</string>
     <string name="remove_ads_restore_success">Restored successfully.</string>
     <string name="ads_removed_label">Ads removed</string>
+
+    <!-- Admin ads management (ROOT mode only) -->
+    <string name="admin_ads_override">Admin: Ads override</string>
+    <string name="admin_ads_status_none">Override: none</string>
+    <string name="admin_ads_status_force_hide">Override: force hide (ads off)</string>
+    <string name="admin_ads_status_force_show">Override: force show (ads on)</string>
+    <string name="admin_switch_disable_ads">Disable ads</string>
+    <string name="admin_switch_enable_ads">Enable ads</string>
 </resources>

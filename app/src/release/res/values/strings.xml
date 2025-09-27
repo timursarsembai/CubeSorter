@@ -1,0 +1,25 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <!-- Real AdMob App ID (already used in main); redefine here for clarity if needed -->
+    <string name="admob_app_id">ca-app-pub-8956179513137325~8292548558</string>
+
+    <!-- Release: Home screen banner -->
+    <string name="admob_banner_home">ca-app-pub-8956179513137325/1890791730</string>
+
+    <!-- Release: Native advanced in between-rounds dialog -->
+    <string name="admob_native_between_rounds">ca-app-pub-8956179513137325/1323869426</string>
+
+    <!-- Release: Interstitial every 5 rounds -->
+    <string name="admob_interstitial_rounds">ca-app-pub-8956179513137325/3166051245</string>
+
+    <!-- Release: Rewarded +10s -->
+    <string name="admob_reward_time_bonus">ca-app-pub-8956179513137325/9010787757</string>
+
+    <!-- Release: Rewarded +1 life -->
+    <string name="admob_reward_extra_life">ca-app-pub-8956179513137325/8783503144</string>
+
+    <!-- Release: Dialog banner fallbacks (use same banner unit) -->
+    <string name="admob_banner_dialog_fallback">ca-app-pub-8956179513137325/1890791730</string>
+    <string name="admob_banner_test_fixed">ca-app-pub-8956179513137325/1890791730</string>
+</resources>
+

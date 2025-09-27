@@ -7,6 +7,8 @@ import android.os.Looper
 import android.widget.Button
 import android.widget.ImageButton
 import android.widget.TextView
+import android.widget.LinearLayout
+import android.widget.Switch
 import androidx.appcompat.app.AppCompatActivity
 import androidx.core.view.GravityCompat
 import androidx.drawerlayout.widget.DrawerLayout
@@ -25,6 +27,11 @@ class RemoveAdsActivity : AppCompatActivity() {
     private lateinit var menuRecords: TextView
     private lateinit var menuReset: TextView
     private lateinit var menuRemoveAds: TextView
+
+    // Admin section
+    private var adminSection: LinearLayout? = null
+    private var adminSwitch: Switch? = null
+    private var adminStatus: TextView? = null
 
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
@@ -54,11 +61,17 @@ class RemoveAdsActivity : AppCompatActivity() {
             append("• ").append(getString(R.string.remove_ads_benefit_3))
         }
 
+        // Admin UI
+        adminSection = findViewById(R.id.adminSection)
+        adminSwitch = findViewById(R.id.switchAdminAds)
+        adminStatus = findViewById(R.id.textAdminAdsStatus)
+
         // Инициализируем биллинг (безопасно вызывать повторно)
         BillingManager.init(applicationContext)
 
-        BillingManager.onStatusChanged = { runOnUiThread { updateUI() } }
+        BillingManager.onStatusChanged = { runOnUiThread { updateUI(); updateAdminUI() } }
         updateUI()
+        setupAdminUIIfNeeded()
 
         priceButton.setOnClickListener {
             if (!BillingManager.isAdsRemoved()) {
@@ -83,6 +96,48 @@ class RemoveAdsActivity : AppCompatActivity() {
                     }
                 }
             }, 5000L)
+        }
+    }
+
+    private fun setupAdminUIIfNeeded() {
+        val section = adminSection ?: return
+        val sw = adminSwitch
+        val st = adminStatus
+        if (CubeSorterApplication.isAdminMode) {
+            section.visibility = android.view.View.VISIBLE
+            // Инициализация состояния
+            updateAdminUI()
+            sw?.setOnCheckedChangeListener { _, isChecked ->
+                if (isChecked) {
+                    BillingManager.setAdsOverride(BillingManager.OVERRIDE_FORCE_HIDE) // Отключить рекламу
+                } else {
+                    BillingManager.setAdsOverride(BillingManager.OVERRIDE_FORCE_SHOW) // Включить рекламу
+                }
+                updateAdminUI()
+            }
+        } else {
+            section.visibility = android.view.View.GONE
+            // На всякий случай сбросим override, если не в админ-режиме
+            // BillingManager.clearAdsOverride() // не трогаем, чтобы сохранённое состояние осталось
+        }
+    }
+
+    private fun updateAdminUI() {
+        val section = adminSection ?: return
+        if (section.visibility != android.view.View.VISIBLE) return
+        val override = BillingManager.getAdsOverride()
+        val removed = BillingManager.isAdsRemoved()
+        // Обновим текст статуса
+        adminStatus?.text = when (override) {
+            BillingManager.OVERRIDE_FORCE_HIDE -> getString(R.string.admin_ads_status_force_hide)
+            BillingManager.OVERRIDE_FORCE_SHOW -> getString(R.string.admin_ads_status_force_show)
+            else -> getString(R.string.admin_ads_status_none)
+        }
+        // Логика свитча: включено = принудительно скрыть рекламу
+        adminSwitch?.isChecked = when (override) {
+            BillingManager.OVERRIDE_FORCE_HIDE -> true
+            BillingManager.OVERRIDE_FORCE_SHOW -> false
+            else -> removed // если override нет, выставим по факту (необязательно)
         }
     }
 

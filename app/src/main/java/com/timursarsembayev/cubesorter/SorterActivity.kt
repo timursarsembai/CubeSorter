@@ -563,6 +563,7 @@ class SorterActivity : Activity() {
                 val code = input.text.toString().trim()
                 if (code == "ROOT") {
                     isAdminMode = true
+                    CubeSorterApplication.isAdminMode = true
                     Toast.makeText(this, "Admin mode enabled", Toast.LENGTH_SHORT).show()
                 } else {
                     Toast.makeText(this, "Wrong code", Toast.LENGTH_SHORT).show()
