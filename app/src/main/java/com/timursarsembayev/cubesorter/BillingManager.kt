@@ -34,7 +34,11 @@ object BillingManager : PurchasesUpdatedListener {
         isInitializing.set(true)
         appContext = context.applicationContext
         billingClient = BillingClient.newBuilder(appContext)
-            .enablePendingPurchases()
+            .enablePendingPurchases(
+                PendingPurchasesParams.newBuilder()
+                    .enableOneTimeProducts()
+                    .build()
+            )
             .setListener(this)
             .build()
         billingClient?.startConnection(object: BillingClientStateListener {
@@ -95,7 +99,8 @@ object BillingManager : PurchasesUpdatedListener {
                 .setProductType(BillingClient.ProductType.INAPP)
                 .build()))
             .build()
-        bc.queryProductDetailsAsync(params) { result, list ->
+        bc.queryProductDetailsAsync(params) { result: BillingResult, details: QueryProductDetailsResult ->
+            val list: List<ProductDetails> = details.productDetailsList ?: emptyList()
             if (result.responseCode == BillingClient.BillingResponseCode.OK && list.isNotEmpty()) {
                 productDetails = list.first()
                 Log.i("Billing", "Product details loaded")
@@ -125,8 +130,11 @@ object BillingManager : PurchasesUpdatedListener {
 
     private fun restoreIfNeeded() {
         val bc = billingClient ?: return
-        bc.queryPurchasesAsync(QueryPurchasesParams.newBuilder()
-            .setProductType(BillingClient.ProductType.INAPP).build()) { result, purchases ->
+        bc.queryPurchasesAsync(
+            QueryPurchasesParams.newBuilder()
+                .setProductType(BillingClient.ProductType.INAPP)
+                .build()
+        ) { result: BillingResult, purchases: MutableList<Purchase> ->
             if (result.responseCode == BillingClient.BillingResponseCode.OK) {
                 val owned = purchases.any { it.products.contains(PRODUCT_ID_REMOVE_ADS) && it.purchaseState == Purchase.PurchaseState.PURCHASED }
                 if (owned) {
